@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>投放看板 · 请选择</title>
+<style>
+:root{--line:#e4e7ec;--sub:#667085;--blue:#165DFF;--green:#0a7f46}
+*{box-sizing:border-box}
+body{margin:0;background:#f7f8fa;color:#101828;font:14px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:44px 20px 60px}
+a.back{display:inline-block;margin-bottom:22px;font-size:13px;color:var(--sub);text-decoration:none;border:1px solid var(--line);border-radius:8px;padding:4px 10px;background:#fff}
+h1{font-size:27px;margin:0 0 6px;letter-spacing:-.02em}
+.lead{color:var(--sub);font-size:13.5px;margin:0 0 26px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.entry{display:block;background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px 22px;text-decoration:none;color:inherit;transition:.16s;position:relative;overflow:hidden}
+.entry:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(16,24,40,.10)}
+.entry:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px}
+.entry.k:before{background:var(--blue)}
+.entry.s:before{background:var(--green)}
+.entry h2{font-size:19px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.entry .desc{color:var(--sub);font-size:13px;line-height:1.75;margin:0 0 14px;min-height:66px}
+.entry .meta{font-size:12px;color:#98a2b3;border-top:1px solid #f0f2f5;padding-top:10px}
+.entry .go{font-size:13px;font-weight:600;margin-top:8px;display:inline-block}
+.entry.k .go{color:var(--blue)}
+.entry.s .go{color:var(--green)}
+.chip{font-size:11px;padding:2px 8px;border-radius:99px;font-weight:600}
+.chip.k{background:#eff4ff;color:var(--blue)}
+.chip.s{background:#ecfdf3;color:var(--green)}
+.foot{font-size:12px;color:#98a2b3;margin-top:30px;line-height:1.9;border-top:1px solid #eef0f3;padding-top:16px}
+.foot b{color:#667085}
+@media(max-width:700px){.grid{grid-template-columns:1fr}h1{font-size:22px}}
+</style></head><body><div class="wrap">
+<a class="back" href="../hub.html">← 返回总归档</a>
+<h1>投放看板</h1>
+<p class="lead">两类任务规则、采集节奏、判定逻辑都不同，分开看更清楚。选一个进入。</p>
+
+<div class="grid">
+  <a class="entry k" href="./key.html">
+    <h2>重点稿件 <span class="chip k">目标驱动</span></h2>
+    <p class="desc">给定目标播放与时限，天马 + Story 组合投放，在看冲刺、动态加投、达标收线。看的是「能不能冲到目标」。</p>
+    <div class="meta">播放/在看 20 秒 · 5 分钟曲线 · 后台消耗 15 分钟</div>
+    <span class="go">进入重点稿件看板 →</span>
+  </a>
+
+  <a class="entry s" href="./sanjia.html">
+    <h2>三家稿件 <span class="chip s">24h 过 5w</span></h2>
+    <p class="desc">登记后 24h 内过 5w 播放，单篇 40w 曝光封顶。AI 天马为主、三项目轮流、强保量只做保底。看的是「24h 能不能过关」。</p>
+    <div class="meta">播放 15 分钟 · 后台消耗 每小时 · 过 5w 自动下资源</div>
+    <span class="go">进入三家稿件看板 →</span>
+  </a>
+</div>
+
+<div class="foot">
+<b>说明</b>：站点页面为定时快照，实时数据看本机面板（重点 <code>/</code>、三家 <code>/sanjia.html</code>）。<br>
+三家稿件可由同事直接登记：进入三家看板 → ＋ 登记三家稿件（填写提交人与 BV 号）。
+</div>
+</div></body></html>
