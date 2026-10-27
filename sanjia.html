@@ -87,6 +87,25 @@ td{padding:7px 6px;border-bottom:1px solid #f5f6f8}
 .mini .m b{font-size:20px;font-weight:700}
 .mini .m b i{font-size:12px;color:#98a2b3;font-style:normal;font-weight:400}
 .mini .lk{margin-left:auto;font-size:12.5px;color:#165DFF;text-decoration:none;border:1px solid #d1e0ff;background:#f5f8ff;border-radius:8px;padding:7px 13px}
+/* ===== 卡片网格（4 列紧凑方块）===== */
+.sj-list{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+@media(max-width:1280px){.sj-list{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:980px){.sj-list{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.sj-list{grid-template-columns:1fr}}
+.sj-list .sj{margin-bottom:0;padding:12px 13px;border-radius:12px;display:flex;flex-direction:column;gap:7px;min-height:0}
+.sj-list .sj-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.sj-list .sj-bv{font-size:13.5px}
+.sj-list .sj-title{margin-left:0;font-size:11.5px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:#667085}
+.sj-list .mini{gap:14px;margin-top:2px;flex-wrap:nowrap;align-items:flex-end}
+.sj-list .mini .m small{font-size:10.5px}
+.sj-list .mini .m b{font-size:17px}
+.sj-list .mini .m b i{font-size:11px}
+.sj-list .mini .lk{margin-left:auto;padding:5px 9px;font-size:11.5px;border-radius:7px}
+.sj-list .acts2{display:flex;gap:6px;align-items:center;margin-top:2px}
+.sj-list .acts2 .lk{margin-left:0;padding:5px 9px;font-size:11.5px;border:1px solid #d1e0ff;background:#f5f8ff;border-radius:7px;color:#165DFF;text-decoration:none}
+.sj-list .acts2 button{margin-left:auto;padding:5px 10px;border:1px solid #d92d20;background:#fff;color:#d92d20;border-radius:7px;font-size:11.5px;cursor:pointer}
+.sj-list .sj.done{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:12px 13px}
+.sj-list .sj.done .sj-meta{font-size:11.5px}
 </style></head><body>
 <div class="wrap">
 <script>window.TIANMA_API='http://127.0.0.1:7788';</script>
@@ -127,28 +146,30 @@ function sjPlanStrip(t){
 }
 function sjCard(t){
   var done=(t.status!=='running');
-  var v=t.v||0, tg=t.target||50000, spent=t.tianmaSpent||0;
+  var v=t.v||0, spent=t.tianmaSpent||0;
   var bv=t.bvid;
   var bgl='https://manager.bilibili.co/v2#/app-rec/tianma/position?card_classify=1&resource_type=1&resource_oid='+bv;
   if(done){
-    var pub=t.pubdate?new Date(t.pubdate*1000).toLocaleDateString('zh-CN').slice(5):'—';
+    var tag=(t.status==='done')?'已过 5w':(t.status==='stopped'?'临时下线':'已收尾');
     return '<div class="sj done">'
-      +'<a class="sj-bv" href="https://www.bilibili.com/video/'+bv+'" target="_blank">'+bv+'</a>'
-      +'<span class="sj-title">'+String(t.title||'').slice(0,52)+'</span>'
-      +'<span class="sj-meta">'+(t.author||'—')+' · 发布 '+pub+' · 消耗天马 '+sjWan(spent)+'</span>'
-      +'<span class="tag2 done" style="margin-left:auto">'+(t.status==='done'?'已过 5w · 资源已下线':(t.status==='stopped'?'临时下线':'已收尾 · 资源已下线'))+'</span>'
+      +'<div class="sj-top"><a class="sj-bv" href="https://www.bilibili.com/video/'+bv+'" target="_blank">'+bv+'</a>'
+      +'<span class="tag2 done">'+tag+'</span></div>'
+      +'<span class="sj-title">'+String(t.title||'').slice(0,60)+'</span>'
+      +'<span class="sj-meta">消耗天马 '+sjWan(spent)+'</span>'
       +'</div>';
   }
   return '<div class="sj">'
     +'<div class="sj-top"><a class="sj-bv" href="https://www.bilibili.com/video/'+bv+'" target="_blank">'+bv+'</a>'
-    +'<a class="sj-title" href="https://www.bilibili.com/video/'+bv+'" target="_blank" style="text-decoration:none">'+String(t.title||'').slice(0,52)+'</a></div>'
+    +'<span class="tag2 run">投放中</span></div>'
+    +'<a class="sj-title" href="https://www.bilibili.com/video/'+bv+'" target="_blank" style="text-decoration:none">'+String(t.title||'')+'</a>'
     +'<div class="mini">'
     +'<span class="m"><small>当前播放</small><b>'+sjWan(v)+'<i> / 5w</i></b></span>'
     +'<span class="m"><small>消耗天马</small><b>'+sjWan(spent)+'</b></span>'
-    +'<a class="lk" href="'+bgl+'" target="_blank">后台记录 →</a><button class="sj-stop" onclick="sjStop(\''+t.id+'\')" style="margin-left:auto;padding:4px 12px;border:1px solid #d92d20;background:#fff;color:#d92d20;border-radius:7px;font-size:12px;cursor:pointer">不投了</button>'
-    +'</div></div>';
-}
-function renderSanjia(D){
+    +'</div>'
+    +'<div class="acts2"><a class="lk" href="'+bgl+'" target="_blank">后台记录 →</a>'
+    +'<button onclick="sjStop(\''+t.id+'\')">不投了</button></div>'
+    +'</div>';
+}function renderSanjia(D){
   var box=document.getElementById('sanjia'); if(!box) return;
   var arr=(D.sanjia||[]).slice();
   var alerts=(D.alerts||[]).filter(function(a){return a.level==='bad'||a.level==='warn';}).slice(0,4);
@@ -168,10 +189,10 @@ function renderSanjia(D){
   var sjTime=LIVE_OK?('实时 '+new Date(LIVE_AT).toLocaleTimeString('zh-CN')):(window.TIANMA_SANJIA&&window.TIANMA_SANJIA.publishedAt?new Date(window.TIANMA_SANJIA.publishedAt).toLocaleString('zh-CN').slice(5,17):'快照');
   var h=head.replace('<small id="sj_sum"></small>','<small>在跑 <b>'+live.length+'</b> 篇 · 24h 过关 <b>'+okCount+'</b> 篇 · 单篇 40w 封顶 · 数据 '+sjTime+'</small>');
   if(alerts.length){ h+='<div class="sj-alert">'+alerts.map(function(a){return '<div>⚠ '+a.bvid+' · '+a.text+'</div>';}).join('')+'</div>'; }
-  live.forEach(function(t){ h+=sjCard(t); });
+  if(live.length){ h+='<div class="sj-list">'+live.map(sjCard).join('')+'</div>'; }
   if(dead.length){
     h+='<div class="sj-head" style="margin-top:22px"><div class="t"><h2 style="font-size:15px;color:#98a2b3">已结束 · 数据保留</h2></div></div>';
-    dead.forEach(function(t){ h+=sjCard(t); });
+    h+='<div class="sj-list">'+dead.map(sjCard).join('')+'</div>';
   }
   box.innerHTML=h;
 }
