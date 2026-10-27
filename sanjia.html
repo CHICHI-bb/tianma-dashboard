@@ -243,24 +243,65 @@ setInterval(reloadData,60000);
     if(!confirm('确定停止这条稿件并下线所有卡片？')) return;
     location.href=(window.SJ_EXEC||API)+'/do?act=sanjia_stop&taskId='+encodeURIComponent(id)+'&k='+(window.SJ_KEY||'')+'&back='+encodeURIComponent(BACK);
   };
+  function sjStateText(s){
+    var m={0:'待投放',1:'投放中',2:'已结束',3:'已暂停',4:'投放中',5:'已下线',6:'待审核'};
+    return (m[s]!==undefined)?m[s]:('状态'+s);
+  }
+  function sjApi(path){
+    var cross=(location.hostname&&location.hostname.indexOf('github.io')>=0);
+    var base=cross?TUNNEL:'';
+    return fetch(base+path).then(function(r){return r.json();});
+  }
+  function sjBox(inner){ return '<div style="padding:10px 14px;border:1px solid #e4e7ec;border-radius:8px;margin-bottom:8px;font-size:12.5px">'+inner+'</div>'; }
+  function liveLookup(bv,box,raw){
+    box.innerHTML=sjBox('<span style="color:#475467">本地无登记，正在查天马后台…（首次约 20~40 秒）</span>');
+    sjApi('/api/lookup?bv='+encodeURIComponent(bv)).then(function(d){
+      if(!d||!d.ok){
+        var why=(d&&(d.error||d.err))||'未知错误';
+        box.innerHTML='<div style="padding:10px 14px;background:#fff7f7;border:1px solid #f0c0c0;border-radius:8px;color:#d92d20;font-size:12.5px">后台查询失败：'+why+'</div>';
+        return;
+      }
+      var html='';
+      if((d.cards||[]).length){
+        html+='<div style="font-size:12px;color:#667085;margin:0 0 6px">天马后台 · 已查 '+d.plans+' 个项目池</div>';
+        html+=(d.cards).map(function(c){
+          var on=(c.state===1||c.state===4);
+          return sjBox('<div style="font-weight:600">'+d.bv+' <span style="color:'+(on?'#0a7f46':'#667085')+'">'+sjStateText(c.state)+'</span></div>'
+            +'<div style="color:#98a2b3">项目池 '+c.plan+' · 预算 '+(Math.round(c.budget/1000)/10)+'w · '+(c.start||'')+' ~ '+(c.end||'')+' · 创建人 '+(c.creator||'-')+'</div>');
+        }).join('');
+      }
+      if((d.hot||[]).length){
+        html+='<div style="font-size:12px;color:#667085;margin:10px 0 6px">热搜提报</div>';
+        html+=(d.hot).map(function(h){
+          return sjBox('<div style="font-weight:600">'+(h.word||'')+'</div>'
+            +'<div style="color:#98a2b3">状态 '+(h.status)+' · 提报人 '+(h.creator||'-')+'</div>');
+        }).join('');
+      }
+      if(!html){
+        html='<div style="padding:10px 14px;background:#fff7f7;border:1px solid #f0c0c0;border-radius:8px;color:#d92d20;font-size:12.5px">天马后台（已查 '+d.plans+' 个项目池）里也没有 '+raw+' 的投放记录。注意 BV 号大小写必须与后台一致。</div>';
+      }
+      box.innerHTML=html;
+    }).catch(function(e){
+      box.innerHTML='<div style="padding:10px 14px;background:#fff7f7;border:1px solid #f0c0c0;border-radius:8px;color:#d92d20;font-size:12.5px">查询出错：'+(e&&e.message||e)+'</div>';
+    });
+  }
   window.sjSearch=function(){
-    var q=(document.getElementById('sj_search').value||'').trim().toUpperCase();
+    var raw=(document.getElementById('sj_search').value||'').trim();
+    var q=raw.toUpperCase();
+    var bv=(raw.length>2&&/^bv/i.test(raw))?('BV'+raw.slice(2)):raw;
     var box=document.getElementById('sj_result'); if(!box) return;
     if(!q){ box.innerHTML=''; return; }
     var D=window.TIANMA_SANJIA||{sanjia:[]};
     var hits=(D.sanjia||[]).filter(function(t){ return (t.bvid||'').toUpperCase().indexOf(q)>=0; });
-    if(!hits.length){ box.innerHTML='<div style="padding:10px 14px;background:#fff7f7;border:1px solid #f0c0c0;border-radius:8px;color:#d92d20;font-size:12.5px">未找到 '+q+' —— 本地没有这条稿件的登记/投放记录（快照约2小时更新一次）。若刚提交请稍等，或该稿件由他人后台手动投放。</div>'; return; }
+    if(!hits.length){ liveLookup(bv,box,raw); return; }
     box.innerHTML=hits.map(function(t){
       var st=t.status==='running'?'投放中':(t.status==='done'?'已达标下线':'已停/收尾');
       var r=(t.rounds||[]).length?('已投 '+t.rounds.length+' 轮 · 最近项目 '+t.rounds[t.rounds.length-1].project):'未投';
-      return '<div style="padding:10px 14px;border:1px solid #e4e7ec;border-radius:8px;margin-bottom:8px;font-size:12.5px">'
-        +'<div style="font-weight:600">'+t.bvid+' <span style="color:'+(t.status==='running'?'#0a7f46':'#667085')+'">'+st+'</span></div>'
+      return sjBox('<div style="font-weight:600">'+t.bvid+' <span style="color:'+(t.status==='running'?'#0a7f46':'#667085')+'">'+st+'</span></div>'
         +'<div style="color:#667085">'+(t.title||'')+'</div>'
-        +'<div style="color:#98a2b3">'+r+' · 播放 '+sjWan(t.v)+' · 消耗天马 '+sjWan(t.tianmaSpent)+' · 提交人 '+(t.requester||'未填')+'</div>'
-        +'</div>';
+        +'<div style="color:#98a2b3">'+r+' · 播放 '+sjWan(t.v)+' · 消耗天马 '+sjWan(t.tianmaSpent)+' · 提交人 '+(t.requester||'未填')+'</div>');
     }).join('');
-  };
-  window.submitSanjia=function(){
+  };  window.submitSanjia=function(){
     var bv=document.getElementById('s_bv').value.trim();
     var msg=document.getElementById('s_msg');
     if(!/^BV[0-9A-Za-z]{8,12}$/.test(bv)){msg.textContent='BV 号格式不对';return;}
