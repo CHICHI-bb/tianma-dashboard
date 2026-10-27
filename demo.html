@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>三家/重点稿件 自动投放</title>
+<style>
+:root{--line:#e4e7ec;--sub:#667085;--blue:#165DFF;--green:#039855;--red:#d92d20;--orange:#dc6803}
+*{box-sizing:border-box}
+body{margin:0;background:#f7f8fa;color:#101828;font:14px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:32px 20px 60px}
+.back{display:inline-block;margin-bottom:20px;font-size:13px;color:#667085;text-decoration:none;border:1px solid var(--line);border-radius:8px;padding:4px 10px;background:#fff}
+h1{font-size:28px;margin:0 0 6px;letter-spacing:-.02em}
+.lead{color:var(--sub);margin:0 0 18px;font-size:13.5px}
+.bar{display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+.pill{background:#fff;border:1px solid var(--line);border-radius:99px;padding:5px 14px;font-size:13px}
+.pill b{color:var(--blue)}
+.task{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin-bottom:18px}
+.th{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.bv{font-size:17px;font-weight:700;font-family:Consolas,monospace}
+.tt{color:var(--sub);font-size:13px}
+.st{font-size:12px;padding:3px 10px;border-radius:99px;font-weight:600}
+.st.ok{background:#ecfdf3;color:var(--green)}.st.warn{background:#fffaeb;color:var(--orange)}.st.bad{background:#fef3f2;color:var(--red)}.st.idle{background:#f2f4f7;color:#667085}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.k{background:#fafbfc;border:1px solid #f0f2f5;border-radius:10px;padding:10px 12px}
+.k small{display:block;color:var(--sub);font-size:11.5px}
+.k b{display:block;font-size:21px;font-weight:700;margin-top:3px}
+.adv{border-left:4px solid #98a2b3;background:#fafbfc;border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:13px}
+.adv b{font-size:11.5px;color:var(--sub);display:block;font-weight:700;letter-spacing:.3px}
+.chart{background:#fafbfc;border:1px solid #f0f2f5;border-radius:10px;padding:10px 8px 4px;margin-bottom:12px}
+.chart .ct{font-size:11.5px;color:var(--sub);margin:0 0 4px 6px;display:flex;justify-content:space-between}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;color:#98a2b3;font-weight:600;font-size:11px;padding:6px;border-bottom:1px solid var(--line)}
+td{padding:7px 6px;border-bottom:1px solid #f5f6f8}
+.tag{font-size:10.5px;padding:2px 7px;border-radius:5px;font-weight:700;background:#f2f4f7;color:#667085}
+.tag.live{background:#eff4ff;color:var(--blue)}.tag.done{background:#f2f4f7;color:#98a2b3}.tag.warn{background:#fef3f2;color:var(--red)}
+.sec{margin-top:14px;border-top:1px solid #f0f2f5;padding-top:12px}
+.sec h4{font-size:11.5px;color:var(--sub);margin:0 0 8px;font-weight:700;letter-spacing:.3px}
+.plan-foot{font-size:12px;color:#344054;margin-top:8px}
+.chips span{display:inline-block;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:3px 8px;margin:3px 4px 0 0;font-size:11px}
+.tl{list-style:none;margin:0;padding:0;font-size:12px}
+.tl li{display:grid;grid-template-columns:52px 1fr;gap:8px;color:#344054;line-height:1.85}
+.tl b{color:#98a2b3;font-family:Consolas,monospace;font-size:11px;font-weight:600}
+.acts{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.acts button{flex:1;min-width:130px;padding:9px 0;border-radius:8px;border:1px solid #d0d5dd;background:#fff;font-size:12.5px;font-weight:600;color:#667085;cursor:not-allowed}
+.acts button.hot{border-color:#fda29b;color:#d92d20}
+.empty{background:#fff;border:1px dashed var(--line);border-radius:16px;padding:50px;text-align:center;color:#98a2b3}
+.foot{color:#98a2b3;font-size:12px;margin-top:24px;text-align:center}
+@media(max-width:820px){.kpis{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
+
+/* ===== 三家稿件 ===== */
+.sj-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:30px 0 10px;flex-wrap:wrap}
+.sj-head .t{display:flex;align-items:baseline;gap:10px}
+.sj-head h2{font-size:19px;margin:0}
+.sj-head small{color:#98a2b3;font-size:12px}
+.sj-btn{padding:6px 14px;border-radius:99px;border:0;background:#0a7f46;color:#fff;font-size:13px;font-weight:600;cursor:pointer}
+.sj-alert{background:#fef3f2;border:1px solid #fda29b;border-left:4px solid #d92d20;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#b42318}
+.sj-alert div+div{margin-top:6px}
+.sj{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:12px;transition:.2s}
+.sj.gone{opacity:.55;filter:grayscale(1);background:#fbfbfc}
+.sj-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+.sj-bv{font-family:Consolas,monospace;font-weight:700;font-size:16px;color:#101828;text-decoration:none}
+.sj-bv:hover{color:#165DFF;text-decoration:underline}
+.sj-title{color:#667085;font-size:12.5px;margin-left:8px}
+.sj-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0}
+.sj-k{background:#fafbfc;border:1px solid #f0f2f5;border-radius:9px;padding:8px 10px}
+.sj-k small{display:block;color:#98a2b3;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sj-k b{display:block;font-size:16px;margin-top:2px}
+.pb{height:6px;background:#f0f2f5;border-radius:99px;overflow:hidden;margin:2px 0 10px}
+.pb i{display:block;height:100%;background:#165DFF;transition:.4s}
+.pb i.hit{background:#039855}
+.sj-tb{width:100%;border-collapse:collapse;font-size:12px}
+.sj-tb th{text-align:left;color:#98a2b3;font-weight:600;font-size:11px;padding:5px 6px;border-bottom:1px solid var(--line)}
+.sj-tb td{padding:6px;border-bottom:1px solid #f5f6f8}
+.sj-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.sj-links a{font-size:12px;color:#165DFF;text-decoration:none;border:1px solid #d1e0ff;background:#f5f8ff;border-radius:7px;padding:4px 10px}
+.sj-links a:hover{background:#eaf1ff}
+.tag2{font-size:11px;padding:2px 8px;border-radius:6px;font-weight:700;white-space:nowrap}
+.tag2.run{background:#ecfdf3;color:#039855}
+.tag2.done{background:#f2f4f7;color:#98a2b3}
+.tag2.warn{background:#fffaeb;color:#dc6803}
+.tag2.bad{background:#fef3f2;color:#d92d20}
+.sj-note{font-size:12px;color:#667085;margin-top:8px}
+@media(max-width:820px){.sj-grid{grid-template-columns:1fr 1fr}}
+</style></head><body>
+<script>window.TIANMA_API='http://127.0.0.1:7788';</script>
+<div class="wrap">
+  <a class="back" href="../hub.html">← 返回总归档</a>
+  <h1>三家/重点稿件 自动投放 <span style="font-size:13px;background:#fffaeb;color:#b54708;border:1px solid #f5d78e;border-radius:6px;padding:3px 9px;vertical-align:middle">演示画面 · 数据为模拟</span></h1>
+  <p class="lead">目标驱动投放监控：达成曲线 · 在看冲刺 · 增量节奏 · 拆解方案 · 资源消耗 · 事件时间线。数据由本机采集端快照发布。</p>
+  <div class="bar" id="bar2" style="margin-bottom:10px"></div>
+  <div class="bar" id="bar"></div>
+  <div id="sanjia"></div>
+  <div id="list"></div>
+  <div class="foot" id="foot"></div>
+</div>
+<script>window.TIANMA_BOARD={"publishedAt":1793026675430,"kind":"key","tasks":[{"bvid":"BV1Kx4y1Z7mQ","title":"【重点】某某发布会现场实录","target":10,"startAt":"2026-10-26T13:42:55.430Z","deadline":"2026-10-26T15:42:55.430Z","status":"running","samples":[{"t":1793022175430,"v":3000,"on":900},{"t":1793022475430,"v":6900,"on":970},{"t":1793022775430,"v":10800,"on":1040},{"t":1793023075430,"v":14700,"on":1110},{"t":1793023375430,"v":18600,"on":1180},{"t":1793023675430,"v":22500,"on":1250},{"t":1793023975430,"v":26400,"on":1320},{"t":1793024275430,"v":30300,"on":1390},{"t":1793024575430,"v":34200,"on":1460},{"t":1793024875430,"v":38100,"on":1530},{"t":1793025175430,"v":48000,"on":1600},{"t":1793025475430,"v":53160,"on":1670},{"t":1793025775430,"v":58440,"on":1740},{"t":1793026075430,"v":63840,"on":1810},{"t":1793026375430,"v":69360,"on":1880},{"t":1793026675430,"v":75000,"on":1950}],"v":75000,"delta":5400,"on":1950,"live":{"t":1793026655430,"v":75900,"on":2010},"pred":{"rate":1080,"pred":108000,"remain":45,"needPer5":5200,"eta":1793029015430,"conf":"高"},"advice":{"act":"stop_story","text":"在看连续2次达1000+ 且预测 10.8w ≥ 目标×0.95（9.5w）→ 可提前下线 Story"},"cards":{"tianma":[{"uuid":"k1a2b3c4d5e6f7a8","plan":6465,"budget":1000000,"spent":742000,"start":"2026-10-26 20:30:00","end":"2026-10-26 22:30:00","notify":true,"priority":8}],"story":[{"uuid":"k9z8y7x6w5v4u3t2","plan":6465,"budget":200000,"spent":186000,"start":"2026-10-26 20:32:00","end":"2026-10-26 21:32:00","notify":true,"priority":9}]},"sprint":{"samples":[{"t":1793022175430,"on":600},{"t":1793022475430,"on":860},{"t":1793022775430,"on":1120},{"t":1793023075430,"on":1380},{"t":1793023375430,"on":1640},{"t":1793023675430,"on":1900},{"t":1793023975430,"on":2160},{"t":1793024275430,"on":2420}]},"remark":"发布会","reason":"重点-发布会","events":[{"t":1793022175430,"tag":"push","text":"天马 100w/2h 已投 · 项目 6465"},{"t":1793022295430,"tag":"push","text":"Story 20w/1h 已投 · 优先级 9"},{"t":1793023675430,"tag":"alert","text":"T+25min 在看 1500，已过 1000 门槛"}],"resourceAt":1793022295430},{"bvid":"BV1Tz4y1Q6nR","title":"【重点】区域经济观察特别节目","target":10,"startAt":"2026-10-26T10:57:55.430Z","deadline":"2026-10-26T12:57:55.430Z","status":"closed","samples":[{"t":1793012275430,"v":2000,"on":300},{"t":1793014075430,"v":40000,"on":1400},{"t":1793015875430,"v":78000,"on":1900},{"t":1793017675430,"v":101000,"on":1600}],"v":101000,"delta":6000,"on":1600,"live":null,"pred":{"rate":900,"pred":101000,"remain":0,"needPer5":0,"eta":-1,"conf":"高"},"advice":{"act":"done","text":"已达成目标 10.10w"},"cards":{"tianma":[{"uuid":"k7h6g5f4e3d2c1b0","plan":6465,"budget":1000000,"spent":986000,"start":"2026-10-26 18:00:00","end":"2026-10-26 20:00:00","notify":true,"priority":8}],"story":[]},"sprint":null,"remark":"","reason":"重点","events":[{"t":1793017675430,"tag":"done","text":"已达成，自动下线 Story 1 张"}],"resourceAt":1793012395430}],"alerts":[]};window.TIANMA_SANJIA={"publishedAt":1793026675430,"kind":"sanjia","sanjia":[{"id":"demo1","type":"sanjia","bvid":"BV1Sj4y1N8pL","title":"某地产业升级调研报道","requester":"v_yaoyuchen","registeredAt":"2026-10-26T08:27:55.430Z","deadline":"2026-10-27T08:27:55.430Z","target":50000,"targetW":5,"v":14000,"delta":5200,"on":860,"status":"running","elapsed":390,"minsLeft":1050,"first2h":{"v":13800,"el":120,"at":1793010475430},"gate":{"ok":true,"mins":120,"v":13800},"advice":{"act":"wait","text":"第 1 轮结束，播放 1.40w < 5w → 换项目 6760 开第 2 轮（普通投放 · 10w）"},"rounds":[{"n":1,"project":6465,"gd":"普通投放","ai":true,"notify":true,"budget":120000,"hours":3,"lastResort":false,"at":1793003275430,"atText":"2026-10-26 16:20:00","uuid":"sj1111aaaa2222"},{"n":2,"project":6760,"gd":"普通投放","ai":true,"notify":true,"budget":100000,"hours":5,"lastResort":false,"at":1793014075430,"atText":"2026-10-26 19:20:00","uuid":"sj3333bbbb4444"}],"cards":[{"uuid":"sj1111aaaa2222","plan":6465,"budget":120000,"spent":118600,"start":"2026-10-26 16:20:00","end":"2026-10-26 19:20:00","notify":true,"live":false},{"uuid":"sj3333bbbb4444","plan":6760,"budget":100000,"spent":42000,"start":"2026-10-26 19:20:00","end":"2026-10-27 00:20:00","notify":true,"live":true}],"liveCount":1,"budgetTotal":400000,"budgetPlanned":220000,"tianmaSpent":160600,"tianmaBudget":220000,"alerts":[{"t":1793005435430,"level":"warn","text":"T+30min 预测 90min 仅 0.92w < 1w → 预警，提前换项目 6760 加推","tag":"alert30"}],"events":[],"plan":[{"n":1,"budget":120000,"hours":3,"gd":"普通投放","notify":true,"ai":true,"label":"AI 天马点火"},{"n":2,"budget":100000,"hours":5,"gd":"普通投放","notify":true,"ai":true,"label":"AI 天马加推"},{"n":3,"budget":80000,"hours":8,"gd":"普通投放","notify":true,"ai":true,"label":"AI 天马铺量"},{"n":4,"budget":100000,"hours":8,"gd":"强保量投放","notify":false,"ai":false,"label":"强保量保底","lastResort":true}],"nextPlan":{"n":3,"budget":80000,"hours":8,"gd":"普通投放","notify":true,"ai":true,"label":"AI 天马铺量"}},{"id":"demo2","type":"sanjia","bvid":"BV1Cj4y1M5nK","title":"某省文旅融合专题","requester":"同事小王","registeredAt":"2026-10-25T18:57:55.430Z","deadline":"2026-10-26T18:57:55.430Z","target":50000,"targetW":5,"v":51200,"delta":900,"on":420,"status":"done","elapsed":1200,"minsLeft":240,"first2h":{"v":9600,"el":120,"at":1792961875430},"gate":{"ok":true,"mins":105,"v":10100},"advice":{"act":"done","text":"播放 5.12w ≥ 5w → 自动下资源"},"rounds":[{"n":1,"project":6465,"gd":"普通投放","ai":true,"notify":true,"budget":120000,"hours":3,"lastResort":false,"at":1792954675430,"atText":"2026-10-26 02:50:00","uuid":"sj5555cccc6666"}],"cards":[{"uuid":"sj5555cccc6666","plan":6465,"budget":120000,"spent":119800,"start":"2026-10-26 02:50:00","end":"2026-10-26 05:50:00","notify":true,"live":false}],"liveCount":0,"budgetTotal":400000,"budgetPlanned":120000,"tianmaSpent":119800,"tianmaBudget":120000,"alerts":[{"t":1792976275430,"level":"ok","text":"✅ BV1Cj4y1M5nK 已过 5w（5.12w），资源已下线，看板置底","tag":"done"}],"events":[],"plan":[{"n":1,"budget":120000,"hours":3,"gd":"普通投放","notify":true,"ai":true,"label":"AI 天马点火"},{"n":2,"budget":100000,"hours":5,"gd":"普通投放","notify":true,"ai":true,"label":"AI 天马加推"},{"n":3,"budget":80000,"hours":8,"gd":"普通投放","notify":true,"ai":true,"label":"AI 天马铺量"},{"n":4,"budget":100000,"hours":8,"gd":"强保量投放","notify":false,"ai":false,"label":"强保量保底","lastResort":true}],"nextPlan":null,"doneAt":1792976275430}],"alerts":[{"t":1793005435430,"level":"warn","text":"T+30min 预测 90min 仅 0.92w < 1w → 预警，提前换项目 6760 加推","tag":"alert30"}]};</script>
+<script>
+const NS='http://www.w3.org/2000/svg';
+function el(p,t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e}
+function tx(p,x,y,s,a){const e=el(p,'text',Object.assign({x:x,y:y,'font-size':9.5,fill:'#98a2b3','font-family':'Consolas,monospace'},a||{}));e.textContent=s;return e}
+const hhmm=ms=>{const d=new Date(ms);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
+const wan=v=>v==null?'—':(v/10000).toFixed(2);
+function statusOf(t){
+  if(t.status!=='running')return['已结束','idle'];
+  if(t.v!=null&&t.v>=t.target*10000)return['已达成','ok'];
+  if(!t.pred)return['数据不足','idle'];
+  if(t.pred.pred>=t.target*10000*0.95)return['进度正常','ok'];
+  if(t.pred.pred>=t.target*10000*0.85)return['略慢','warn'];
+  return['无法达成','bad'];
+}
+function svgBox(w,h){const s=document.createElementNS(NS,'svg');s.setAttribute('viewBox','0 0 '+w+' '+h);s.setAttribute('width','100%');s.style.display='block';return s}
+function drawMain(t){
+  const W=1120,H=230,L=40,R=12,TP=14,B=26;
+  const T=+new Date(t.startAt), DL=+new Date(t.deadline), total=Math.max(1,(DL-T)/60000);
+  const dmax=Math.max(t.target*10000*1.25,(t.v||0)*1.3,1);
+  const X=mn=>L+(mn/total)*(W-L-R), Y=v=>TP+(1-v/dmax)*(H-TP-B);
+  const svg=svgBox(W,H);
+  for(let i=0;i<=4;i++){const v=dmax*i/4;el(svg,'line',{x1:L,y1:Y(v),x2:W-R,y2:Y(v),stroke:'#f0f2f5'});tx(svg,L-6,Y(v)+3,wan(v),{'text-anchor':'end'})}
+  for(let i=0;i<=4;i++){const mn=total*i/4;tx(svg,X(mn),H-9,hhmm(T+mn*60000),{'text-anchor':'middle'})}
+  const v0=t.samples.length?t.samples[0].v:0;
+  el(svg,'line',{x1:X(0),y1:Y(v0),x2:X(total),y2:Y(t.target*10000),stroke:'#d0d5dd','stroke-width':1.6,'stroke-dasharray':'5 4'});
+  tx(svg,X(total)-2,Y(t.target*10000)-7,'目标 '+t.target+'w',{'text-anchor':'end',fill:'#98a2b3','font-size':11});
+  const pts=t.samples.map(s=>[(s.t-T)/60000,s.v]);
+  if(pts.length>1){
+    el(svg,'polygon',{points:[[X(0),Y(v0)]].concat(pts.map(p=>[X(p[0]),Y(p[1])])).concat([[X(pts[pts.length-1][0]),Y(0)],[X(0),Y(0)]]).map(p=>p[0]+','+p[1]).join(' '),fill:'#165DFF',opacity:.06});
+    el(svg,'polyline',{points:pts.map(p=>X(p[0])+','+Y(p[1])).join(' '),fill:'none',stroke:'#165DFF','stroke-width':2.2,'stroke-linejoin':'round'});
+    pts.forEach(p=>el(svg,'circle',{cx:X(p[0]),cy:Y(p[1]),r:1.8,fill:'#165DFF'}));
+  }
+  if(t.pred&&pts.length){
+    const lp=pts[pts.length-1];
+    el(svg,'line',{x1:X(lp[0]),y1:Y(lp[1]),x2:X(total),y2:Y(t.pred.pred),stroke:'#dc6803','stroke-width':1.8,'stroke-dasharray':'4 4'});
+    el(svg,'circle',{cx:X(total),cy:Y(t.pred.pred),r:3.5,fill:'#fff',stroke:'#dc6803','stroke-width':2});
+    tx(svg,X(total)-2,Y(t.pred.pred)+14,'预测 '+wan(t.pred.pred)+'w',{'text-anchor':'end',fill:'#dc6803','font-size':10.5});
+    el(svg,'rect',{x:X(lp[0]),y:Y(Math.min(t.pred.pred,t.target*10000)),width:Math.max(0,X(total)-X(lp[0])),height:Math.abs(Y(t.target*10000)-Y(t.pred.pred)),fill:'#dc6803',opacity:.06});
+  }
+  return svg;
+}
+function drawBar(t){
+  const W=560,H=160,L=32,R=10,TP=10,B=20;
+  const svg=svgBox(W,H);
+  const T=+new Date(t.startAt), total=Math.max(1,(+new Date(t.deadline)-T)/60000);
+  const d=[];
+  for(let i=1;i<t.samples.length;i++)d.push([(t.samples[i].t-T)/60000,t.samples[i].v-t.samples[i-1].v]);
+  if(!d.length){tx(svg,W/2,H/2,'数据不足',{'text-anchor':'middle','font-family':'sans-serif'});return svg}
+  const vmax=Math.max.apply(null,d.map(x=>x[1]).concat([1]))*1.3;
+  const X=mn=>L+(mn/total)*(W-L-R), Y=v=>TP+(1-v/vmax)*(H-TP-B);
+  for(let i=0;i<=2;i++){const v=vmax*i/2;tx(svg,L-4,Y(v)+3,wan(v),{'text-anchor':'end'})}
+  const bw=Math.max(8,(W-L-R)/Math.max(d.length,8)*0.5);
+  d.forEach((p,i)=>{const cx=X(p[0]),y=Y(p[1]);el(svg,'rect',{x:cx-bw/2,y:y,width:bw,height:Math.max(1,H-B-y),rx:2.5,fill:i>=d.length-2?'#dc6803':'#84adff'})});
+  if(t.pred&&t.pred.needPer5>0){el(svg,'line',{x1:L,y1:Y(t.pred.needPer5),x2:W-R,y2:Y(t.pred.needPer5),stroke:'#d92d20','stroke-dasharray':'4 4',opacity:.5});tx(svg,W-R-2,Y(t.pred.needPer5)-4,'达标所需 '+wan(t.pred.needPer5),{'text-anchor':'end',fill:'#d92d20','font-size':9})}
+  return svg;
+}
+function drawSprint(t){
+  const W=560,H=160,L=30,R=10,TP=10,B=18;
+  const svg=svgBox(W,H);
+  const sp=t.sprint;
+  if(!sp||!sp.samples||sp.samples.length<2){tx(svg,W/2,H/2,'暂无冲刺数据',{'text-anchor':'middle','font-family':'sans-serif'});return svg}
+  const T=+new Date(t.startAt);
+  const xs=sp.samples.map(s=>(s.t-T)/60000), ys=sp.samples.map(s=>s.on);
+  const x0=Math.min.apply(null,xs), x1=Math.max.apply(null,xs);
+  const ymax=Math.max.apply(null,ys.concat([1200]))*1.2;
+  const X=m=>L+((m-x0)/Math.max(0.2,x1-x0))*(W-L-R), Y=v=>TP+(1-v/ymax)*(H-TP-B);
+  if(1000<ymax){el(svg,'line',{x1:L,y1:Y(1000),x2:W-R,y2:Y(1000),stroke:'#d92d20','stroke-dasharray':'3 3',opacity:.4});tx(svg,L+2,Y(1000)-3,'1000',{fill:'#d92d20','font-size':9})}
+  if(3000<ymax){el(svg,'line',{x1:L,y1:Y(3000),x2:W-R,y2:Y(3000),stroke:'#039855','stroke-dasharray':'3 3',opacity:.4});tx(svg,L+2,Y(3000)-3,'3000',{fill:'#039855','font-size':9})}
+  el(svg,'polyline',{points:xs.map((m,i)=>X(m)+','+Y(ys[i])).join(' '),fill:'none',stroke:'#dc6803','stroke-width':2});
+  const lp=xs.length-1;
+  el(svg,'circle',{cx:X(xs[lp]),cy:Y(ys[lp]),r:2.6,fill:'#dc6803'});
+  return svg;
+}
+function planOf(t){
+  const T=+new Date(t.startAt), DL=+new Date(t.deadline);
+  const H=(DL-T)/3600000;
+  const tm=Math.min(t.target/10*100,200);
+  const st=t.target/10*20;
+  const prio=t.target<20?'默认':(t.target>=100?'10':'9');
+  const cf=H<=2?0.10:0.25;
+  const rounds=Math.max(1,Math.round(H/2));
+  const per=Math.round(st/rounds*10)/10;
+  return {H,tm,st,prio,cf,rounds,per,outT:tm*0.04,outS:st*cf,T,DL};
+}
+function timeline(t){
+  const items=[];
+  const T=+new Date(t.startAt);
+  items.push([hhmm(T),'创建任务 · 起播点 '+(t.qidian||'未填')+(t.isZero?' · 涉0':'')+' · 理由 '+(t.reason||'—')]);
+  items.push([hhmm(T+10*60000),'开始计入增量（前 10min 仅记录时间点）']);
+  const ev=(t.events||[]).slice().sort((a,b)=>a.t-b.t);
+  ev.forEach(e=>items.push([hhmm(e.t),e.text]));
+  const ss=(t.samples||[]).slice(-4).reverse();
+  ss.forEach(s=>items.push([hhmm(s.t),'播放 '+wan(s.v)+'w · 在看 '+(s.on==null?'—':s.on)]));
+  return items;
+}
+// ================= 三家稿件 =================
+var SJ_MGR='https://manager.bilibili.co/v2#/app-rec/';
+// ===== 共享执行端（跑在有后台权限的那台机器上）=====
+var SJ_EXEC='http://CN210217175:7788';
+var SJ_KEY='2d905d3efd96a652c06de86a28aadae6';
+function sjWan(v){return v==null?'—':(v/10000).toFixed(2)+'w';}
+function sjDur(min){ if(min==null)return '—'; if(min<=0)return '已到期'; var d=Math.floor(min/1440),h=Math.floor((min%1440)/60),m=min%60; return d?(d+'天'+h+'h'):(h?(h+'h'+m+'m'):(m+'m')); }
+function sjGate(g){
+  if(!g) return ['—','#98a2b3'];
+  if(g.ok===true) return ['✓ 过 1w'+(g.mins!=null?' · '+g.mins+'min':''), '#039855'];
+  if(g.ok===false) return ['✗ 未过 1w','#d92d20'];
+  return ['待观察 · 还剩 '+g.left+'min','#dc6803'];
+}
+function sjPlanStrip(t){
+  var plan=t.plan||[]; if(!plan.length) return '';
+  var done=(t.rounds||[]).length;
+  var out=plan.map(function(p,i){
+    var used=i<done;
+    var label='R'+p.n+' '+(p.ai?'AI天马':p.gd)+' '+(p.budget/10000)+'w';
+    if(p.lastResort) label+=' · 保底';
+    return '<span style="display:inline-block;margin:2px 6px 0 0;padding:2px 7px;border-radius:6px;font-size:11px;'
+      +(used?'background:#eef4ff;color:#165DFF;border:1px solid #d1e0ff':'background:#f8fafc;color:#98a2b3;border:1px solid #eef0f3')
+      +(p.lastResort&&!used?';border-style:dashed':'')+'">'+label+'</span>';
+  }).join('');
+  return '<div class="sj-note" style="margin-top:6px">投放计划（首选 AI 天马，强保量仅保底）'+out+'</div>';
+}
+function sjCard(t){
+  var done=(t.status!=='running');
+  var v=t.v||0, tg=t.target||50000, pct=Math.min(100,Math.round(v/tg*100));
+  var g=sjGate(t.gate);
+  var rounds=t.rounds||[];
+  var cards=t.cards||[];
+  var gdOf=function(c){ var r=rounds.filter(function(x){return x.uuid&&c.uuid&&x.uuid===c.uuid;})[0]; return r?(r.gd||'天马'):'天马'; };
+  var liveN=cards.filter(function(c){return c.live;}).length;
+  var kpi='';
+  kpi+='<div class="sj-k"><small>当前播放 / 5w</small><b>'+sjWan(v)+'</b></div>';
+  kpi+='<div class="sj-k"><small>前 2h 播放</small><b>'+(t.first2h?sjWan(t.first2h.v):'累计中')+'</b></div>';
+  kpi+='<div class="sj-k"><small>90min 门槛（1w）</small><b style="font-size:14px;color:'+g[1]+'">'+g[0]+'</b></div>';
+  kpi+='<div class="sj-k"><small>预算已排 / 40w</small><b>'+((t.budgetPlanned||0)/10000)+'w</b></div>';
+  kpi+='<div class="sj-k"><small>'+(done?'结束时间':'剩余时间')+'</small><b style="font-size:15px">'+(done?'—':sjDur(t.minsLeft))+'</b></div>';
+
+  var res='';
+  if(cards.length){
+    var rows='';
+    cards.slice().sort(function(a,b){return (b.live?1:0)-(a.live?1:0);}).forEach(function(c){
+      rows+='<tr><td><b>'+(c.plan||'—')+'</b></td><td>'+gdOf(c)+'</td><td>'+sjWan(c.budget)+'</td><td><b>'+sjWan(c.spent)+'</b></td>'
+        +'<td>'+String(c.start||'').slice(5,16)+' → '+String(c.end||'').slice(5,16)+'</td>'
+        +'<td>'+(c.notify?'开':'关')+'</td>'
+        +'<td><span class="tag2 '+(c.live?'run':'done')+'">'+(c.live?'在投':'已结束')+'</span></td></tr>';
+    });
+    res='<div class="sj-note" style="margin-top:12px">当前在跑 <b>'+liveN+'</b> 张 · 后台记录 '+cards.length+' 张（单位 w 曝光）</div>'
+      +'<table class="sj-tb"><thead><tr><th>项目</th><th>投放方式</th><th>预算</th><th>实际消耗</th><th>时间</th><th>通知</th><th>状态</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  }else{
+    res='<div class="sj-note" style="margin-top:12px">暂无卡片数据（后台卡片由本机采集端读取）</div>';
+  }
+
+  var rl='';
+  rounds.forEach(function(r){
+    var atTxt=r.atText?String(r.atText).slice(5,16):new Date(r.at).toLocaleString('zh-CN').slice(5,16);
+    rl+='<li><b>R'+r.n+'</b><span>'+atTxt+' · '+r.gd+' · 项目 '+r.project+' · '+(r.budget/10000)+'w · '+r.hours+'h · 通知'+(r.notify?'开':'关')+(r.ai?' · AI圈人':'')+(r.uuid?' · '+String(r.uuid).slice(0,8):'')+'</span></li>';
+  });
+
+  var al='';
+  (t.alerts||[]).slice(-3).forEach(function(a){
+    var col=a.level==='bad'?'#d92d20':(a.level==='ok'?'#039855':'#dc6803');
+    al+='<div style="font-size:12px;color:'+col+';margin-top:6px">• '+a.text+'</div>';
+  });
+
+  var bxv=t.bvid;
+  var links='<div class="sj-links">'
+    +'<a href="https://www.bilibili.com/video/'+bxv+'" target="_blank">打开稿件</a>'
+    +'<a href="'+SJ_MGR+'tianma/position?card_classify=1&resource_type=1&resource_oid='+bxv+'" target="_blank">天马投放位</a>'
+    +'<a href="'+SJ_MGR+'plan?plan_id=6465&detail=1&pn=1&ps=20&tab=tianmaConf" target="_blank">项目 6465</a>'
+    +'<a href="'+SJ_MGR+'plan?plan_id=6760&detail=1&pn=1&ps=20&tab=tianmaConf" target="_blank">6760</a>'
+    +'<a href="'+SJ_MGR+'plan?plan_id=6759&detail=1&pn=1&ps=20&tab=tianmaConf" target="_blank">6759</a>'
+    +'</div>';
+
+  var tag=done
+    ? '<span class="tag2 '+(t.status==='done'?'done':'warn')+'">'+(t.status==='done'?'已过 5w · 资源已下线':'已收尾')+'</span>'
+    : '<span class="tag2 run">在跑</span>';
+
+  return '<div class="sj'+(done?' gone':'')+'">'
+    +'<div class="sj-top"><div><a class="sj-bv" href="https://www.bilibili.com/video/'+bxv+'" target="_blank">'+bxv+'</a><span class="sj-title">'+String(t.title||'').slice(0,46)+'</span></div>'
+    +'<div style="display:flex;gap:8px;align-items:center">'+tag+'<span style="font-size:11.5px;color:#98a2b3">'+(t.requester?('提交人 '+t.requester+' · '):'')+'登记 '+new Date(t.registeredAt).toLocaleString('zh-CN').slice(5,16)+'</span></div></div>'
+    +'<div class="pb"><i class="'+(pct>=100?'hit':'')+'" style="width:'+pct+'%"></i></div>'
+    +'<div class="sj-grid">'+kpi+'</div>'
+    +'<div class="sj-note">'+(t.advice?t.advice.text:'—')+'</div>'
+    +sjPlanStrip(t)
+    +al
+    +res
+    +(rl?'<div class="sj-note" style="margin-top:10px">轮次记录</div><ul class="tl">'+rl+'</ul>':'')
+    +links
+    +'</div>';
+}
+function renderSanjia(D){
+  var box=document.getElementById('sanjia'); if(!box) return;
+  var arr=(D.sanjia||[]).slice();
+  var alerts=(D.alerts||[]).filter(function(a){return a.level==='bad'||a.level==='warn';}).slice(0,4);
+  var head='<div class="sj-head"><div class="t"><h2>三家稿件</h2><small id="sj_sum"></small></div>'
+    +'<div style="display:flex;gap:8px;align-items:center">'
+    +'<a href="'+SJ_EXEC+'/sanjia.html" target="_blank" style="font-size:12px;color:#165DFF;text-decoration:none;border:1px solid #d1e0ff;background:#f5f8ff;border-radius:99px;padding:5px 12px">实时看板</a>'
+    +'<button class="sj-btn" onclick="sjOpenForm()">＋ 登记三家稿件</button></div></div>';
+  if(!arr.length){
+    box.innerHTML=head+'<div class="empty" style="padding:30px">暂无三家稿件任务 · 登记后 24h 内目标 5w 播放</div>';
+    return;
+  }
+  var live=arr.filter(function(t){return t.status==='running';});
+  var dead=arr.filter(function(t){return t.status!=='running';});
+  live.sort(function(a,b){return (b.v||0)-(a.v||0);});
+  dead.sort(function(a,b){return (b.doneAt||0)-(a.doneAt||0);});
+  var okCount=dead.filter(function(t){return t.status==='done';}).length;
+  var sjTime=window.TIANMA_SANJIA&&window.TIANMA_SANJIA.publishedAt?new Date(window.TIANMA_SANJIA.publishedAt).toLocaleString('zh-CN').slice(5,17):'—';
+  var h=head.replace('<small id="sj_sum"></small>','<small>在跑 <b>'+live.length+'</b> 篇 · 24h 过关 <b>'+okCount+'</b> 篇 · 单篇 40w 封顶 · 数据 '+sjTime+'</small>');
+  if(alerts.length){ h+='<div class="sj-alert">'+alerts.map(function(a){return '<div>⚠ '+a.bvid+' · '+a.text+'</div>';}).join('')+'</div>'; }
+  live.forEach(function(t){ h+=sjCard(t); });
+  if(dead.length){
+    h+='<div class="sj-head" style="margin-top:22px"><div class="t"><h2 style="font-size:15px;color:#98a2b3">已结束 · 数据保留</h2></div></div>';
+    dead.forEach(function(t){ h+=sjCard(t); });
+  }
+  box.innerHTML=h;
+}
+function render(){
+  const D=window.TIANMA_BOARD||{tasks:[]};
+  const tasks=D.tasks||[];
+  document.getElementById('bar').innerHTML='<span class="pill">任务 <b>'+tasks.filter(t=>t.status==='running').length+'</b> 个在跑</span>'+
+    '<span class="pill">数据快照 <b>'+(D.publishedAt?new Date(D.publishedAt).toLocaleString('zh-CN'):'—')+'</b></span>'+
+    '<span class="pill" style="color:#98a2b3">站点为快照 · 实时请看本机面板</span>';
+  const list=document.getElementById('list');
+  if(!tasks.length){ list.innerHTML='<div class="empty">当前没有重点稿件任务</div>'; renderSanjia(D); return; }
+  list.innerHTML='';
+  tasks.forEach(t=>{
+    const [txt,cls]=statusOf(t);
+    const ad=t.advice||{act:'none',text:'—'};
+    const adColor=(ad.act==='done'||ad.act==='none')?'#98a2b3':(ad.act==='stop_story'?'#dc6803':'#d92d20');
+    const p=planOf(t);
+    let res='';
+    if(t.cards){
+      const mk=(arr,label)=>arr.forEach((c,i)=>{
+        const pct=c.budget?Math.round(c.spent/c.budget*100):0;
+        const ended=new Date(String(c.end).replace(' ','T')+'+08:00')<new Date();
+        res+='<tr><td><b>'+label+(arr.length>1?' #'+(i+1):'')+'</b> <span style="color:#98a2b3">P'+(c.priority==null?'-':c.priority)+'</span></td><td>'+wan(c.budget)+'</td><td>'+String(c.start).slice(5,16)+' → '+String(c.end).slice(5,16)+'</td><td><b>'+wan(c.spent)+'</b> <span style="color:#98a2b3">'+pct+'%</span></td><td><span class="tag '+(ended?'done':'live')+'">'+(ended?'已结束':'投放中')+'</span></td></tr>';
+      });
+      mk(t.cards.tianma||[],'天马'); mk(t.cards.story||[],'Story');
+    }
+    let planRows='<tr><td>—</td><td><b>天马</b> 强保量</td><td><b>'+p.tm+'w</b></td><td>'+hhmm(p.T)+' → '+hhmm(p.DL)+'</td><td>—</td><td>'+wan(p.outT*10000)+'w</td></tr>';
+    for(let i=0;i<p.rounds;i++){
+      const s0=p.T+(p.H/p.rounds)*3600000*i, e0=p.T+(p.H/p.rounds)*3600000*(i+1);
+      planRows+='<tr><td>第'+(i+1)+'轮</td><td>Story '+(i===0?'<span style="color:#dc6803">首轮</span>':'')+'</td><td>'+p.per+'w</td><td>'+hhmm(s0)+' → '+hhmm(e0)+'</td><td><span class="tag live">'+p.prio+'</span></td><td>'+wan(p.per*p.cf*10000)+'w</td></tr>';
+    }
+    let chips='';
+    for(let k=1;k<=8;k++){const v=(t.target/8)*k;chips+='<span>'+hhmm(p.T+(p.DL-p.T)/8*k)+' <b>'+v.toFixed(1)+'w</b></span>';}
+    const tot=p.outT+p.outS, gap=t.target-tot;
+    let tl='';
+    timeline(t).forEach(it=>{tl+='<li><b>'+it[0]+'</b><span>'+it[1]+'</span></li>'});
+
+    const card=document.createElement('div'); card.className='task'; card.setAttribute('data-bvid',t.bvid);
+    card.innerHTML=
+      '<div class="th"><div><span class="bv">'+t.bvid+'</span> <span class="tt">'+(t.title||'')+'</span></div><div><span class="st '+cls+'">'+txt+'</span></div></div>'+
+      '<div class="kpis">'+
+        '<div class="k"><small>当前播放 / 目标 <span class="live-at" style="color:#039855"></span></small><b><span class="live-v">'+wan(t.v)+'</span><span style="font-size:13px;color:#98a2b3"> / '+t.target+'w</span></b></div>'+
+        '<div class="k"><small>近 5min 增量</small><b>'+(t.delta==null?'—':(t.delta>=0?'+':'')+wan(t.delta))+'w</b></div>'+
+        '<div class="k"><small>预计达成时间</small><b style="font-size:17px;color:'+(t.pred&&t.pred.eta>0&&t.pred.eta>+new Date(t.deadline)?'#d92d20':'#101828')+'">'+(t.pred?(t.pred.eta===-1?'已达成':(t.pred.eta==null?'—':hhmm(t.pred.eta))):'—')+'</b></div>'+
+        '<div class="k"><small>预测终值·差 '+(t.pred&&t.pred.pred?wan(t.target*10000-t.pred.pred)+'w':'—')+'</small><b style="font-size:17px">'+(t.pred?wan(t.pred.pred)+'w':'—')+'</b></div>'+
+      '</div>'+
+      '<div class="adv" style="border-left-color:'+adColor+'"><b>当前建议</b><span style="color:'+adColor+'">'+ad.text+'</span></div>'+
+      '<div class="chart"><div class="ct"><span>达成曲线 · 目标 '+t.target+'w · '+hhmm(+new Date(t.deadline))+' 截止</span></div><div class="c1"></div></div>'+
+      '<div class="grid2">'+
+        '<div class="chart"><div class="ct"><span>每 5 分钟增量（虚线=达标所需）</span></div><div class="c2"></div></div>'+
+        '<div class="chart"><div class="ct"><span>在看冲刺（目标 1000+）</span></div><div class="c3"></div></div>'+
+      '</div>'+
+      '<div class="sec"><h4>拆解预览 · 按目标与时长拆分</h4>'+
+        '<table><thead><tr><th>轮次</th><th>资源</th><th>预算</th><th>时间</th><th>优先级</th><th>预期产出</th></tr></thead><tbody>'+planRows+'</tbody></table>'+
+        '<div class="plan-foot">预期合计 <b>'+wan(tot*10000)+'w</b>（天马 '+wan(p.outT*10000)+'w + Story '+wan(p.outS*10000)+'w，Story 系数 '+(p.cf*100)+'%）'+(gap>0?' · 差 <b style="color:#d92d20">'+gap.toFixed(1)+'w</b> 依赖自然流量或后续追加':' · 已覆盖目标')+'</div>'+
+        '<div style="margin-top:8px"><div style="font-size:11px;color:#98a2b3;margin-bottom:4px">对账线（每段应到播放）</div><div class="chips">'+chips+'</div></div>'+
+      '</div>'+
+      '<div class="sec"><h4>生效资源 · 单位 w 曝光</h4>'+
+        '<table><thead><tr><th>资源</th><th>预算</th><th>时间</th><th>消耗</th><th>状态</th></tr></thead><tbody>'+(res||'<tr><td colspan="5" style="color:#98a2b3">暂无卡片数据</td></tr>')+'</tbody></table>'+
+      '</div>'+
+      '<div class="sec"><h4>事件时间线</h4><ul class="tl">'+tl+'</ul></div>'+
+      '<div class="acts">'+
+        '<button data-act="add_story" data-id="'+t.id+'">＋ 投新一轮 Story</button>'+
+        '<button data-act="stop_story" data-id="'+t.id+'">停 Story</button>'+
+        '<button class="hot" data-act="stop_tianma" data-id="'+t.id+'">停天马</button>'+
+        '<button data-act="refresh">刷新数据</button>'+
+      '</div>'+
+      '<div id="msg_'+t.id+'" style="font-size:11.5px;color:#98a2b3;margin-top:8px"></div>'+
+      '<div style="font-size:11px;color:#98a2b3;margin-top:8px">操作按钮需连接后端服务后启用（当前为只读快照）</div>';
+    list.appendChild(card);
+    card.querySelector('.c1').appendChild(drawMain(t));
+    card.querySelector('.c2').appendChild(drawBar(t));
+    card.querySelector('.c3').appendChild(drawSprint(t));
+  });
+  renderSanjia(window.TIANMA_SANJIA||{sanjia:[],alerts:[]});
+  document.getElementById('foot').textContent='数据由本机采集端发布 · 最近更新 '+(D.publishedAt?new Date(D.publishedAt).toLocaleString('zh-CN'):'—');
+}
+render();
+function reloadData(){
+  var pending=2;
+  var done=function(){ if(--pending===0) render(); };
+  ['data/key.js','data/sanjia.js'].forEach(function(f){
+    var s=document.createElement('script');
+    s.src=f+'?v='+Date.now();
+    s.onload=function(){ done(); s.remove(); };
+    s.onerror=function(){ done(); s.remove(); };
+    document.body.appendChild(s);
+  });
+}
+/* demo: 不自动重载 */
+
+// 站点受托管平台 CSP 限制（connect-src none），页面无法直接读外部接口；实时数据请看本机面板
+
+
+</script><div id="mask" style="display:none;position:fixed;inset:0;background:rgba(16,24,40,.45);z-index:999;align-items:center;justify-content:center">
+ <div style="background:#fff;border-radius:14px;padding:22px 24px;width:440px;max-width:92vw;max-height:90vh;overflow:auto">
+  <h3 style="margin:0 0 4px;font-size:16px">新建投放任务</h3>
+  <p style="margin:0 0 14px;font-size:12px;color:#98a2b3">提交后本机开始采集与投放，你无需再干预</p>
+  <div class="fm"><label>BV 号</label><input id="f_bv" placeholder="BV1PuHP6uENX"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="fm"><label>目标播放（万）</label><input id="f_tg" type="number" value="10"></div>
+    <div class="fm"><label>达成方式</label><select id="f_md" onchange="document.getElementById('f_atbox').style.display=this.value==='at'?'block':'none'"><option value="2h">2 小时后</option><option value="at">指定时刻</option></select></div>
+  </div>
+  <div class="fm" id="f_atbox" style="display:none"><label>达成时刻</label><input id="f_at" type="time" value="18:00"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="fm"><label>起播点（时:分:秒）</label><input id="f_qd" type="time" step="1" value="00:00:15"></div>
+    <div class="fm"><label>天马小卡 ID（可不填）</label><input id="f_mt" placeholder=""></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="fm"><label>是否涉 0</label><select id="f_z"><option value="0">否</option><option value="1">是</option></select></div>
+    <div class="fm"><label>备注 / 热点（可选）</label><input id="f_rk" placeholder="填了变成 重点-XX"></div>
+  </div>
+  <div id="f_msg" style="font-size:12px;color:#d92d20;min-height:18px"></div>
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <button onclick="document.getElementById('mask').style.display='none'" style="flex:1;padding:9px;border-radius:8px;border:1px solid #d0d5dd;background:#fff;font-size:13px;cursor:pointer">取消</button>
+    <button onclick="submitTask()" style="flex:1;padding:9px;border-radius:8px;border:0;background:#165DFF;color:#fff;font-size:13px;font-weight:600;cursor:pointer">开始投放</button>
+  </div>
+ </div>
+</div>
+<style>.fm{margin-bottom:10px}.fm label{display:block;font-size:11.5px;color:#667085;font-weight:600;margin-bottom:4px}.fm input,.fm select{width:100%;padding:8px 10px;border:1px solid #d0d5dd;border-radius:7px;font-size:13px;font-family:inherit}</style>
+<script>
+  // 跳转式执行（浏览器禁止 https→http 请求，但允许顶级跳转）
+  var API='http://127.0.0.1:7788';
+  var BACK='https://sites.bilibili.co/zhengmei-daily-report/tianma/index.html';
+  function go(qs){ location.href=(window.SJ_EXEC||API)+'/do?'+qs+'&k='+(window.SJ_KEY||'')+'&back='+encodeURIComponent(BACK); }
+  window.openForm=function(){document.getElementById('mask').style.display='flex';};
+  window.submitTask=function(){
+    var bv=document.getElementById('f_bv').value.trim();
+    var tg=Number(document.getElementById('f_tg').value);
+    var md=document.getElementById('f_md').value;
+    var el=document.getElementById('f_msg');
+    if(!/^BV[0-9A-Za-z]{8,12}$/.test(bv)){el.textContent='BV 号格式不对';return;}
+    if(!(tg>0)){el.textContent='目标必须大于 0';return;}
+    var dl;
+    if(md==='at'){var t=document.getElementById('f_at').value||'18:00';var d=new Date();var p2=t.split(':');d.setHours(+p2[0],+p2[1],0,0);if(d.getTime()<=Date.now())d.setDate(d.getDate()+1);dl=d.toISOString();}
+    else dl=new Date(Date.now()+2*3600*1000).toISOString();
+    go('act=new&bvid='+encodeURIComponent(bv)+'&target='+tg+'&deadline='+encodeURIComponent(dl)
+      +'&qidian='+encodeURIComponent(document.getElementById('f_qd').value||'00:00:15')
+      +'&materialId='+encodeURIComponent(document.getElementById('f_mt').value||'')
+      +'&isZero='+(document.getElementById('f_z').value==='1'?'1':'0')
+      +'&remark='+encodeURIComponent(document.getElementById('f_rk').value||''));
+  };
+  document.addEventListener('click',function(e){
+    var b=e.target.closest&&e.target.closest('button[data-act]');
+    if(!b)return;
+    var a=b.getAttribute('data-act');
+    if(a==='refresh'){location.reload();return;}
+    if(a==='stop_tianma'&&!confirm('确认停止天马投放？'))return;
+    if(a==='stop_story'&&!confirm('确认停止 Story 投放？'))return;
+    if(a==='add_story'&&!confirm('确认投新一轮 Story？'))return;
+    go('act='+a+'&taskId='+encodeURIComponent(b.getAttribute('data-id')||'')
+      +'&budget='+(b.getAttribute('data-budget')||''));
+  });
+  (function(){
+    var bar=document.getElementById('bar2'); if(!bar)return;
+    bar.innerHTML='<span class="pill" style="background:#eff4ff;color:#165DFF;border-color:#b2ccff"><b>操作走本机</b> · 点按钮会短暂跳转到本机执行后自动返回</span>'
+      +'<button onclick="openForm()" style="padding:5px 14px;border-radius:99px;border:0;background:#165DFF;color:#fff;font-size:13px;font-weight:600;cursor:pointer">＋ 新建任务</button>'
+      +'<a href="'+API+'/do?act=ping&back='+encodeURIComponent(BACK)+'" style="padding:5px 12px;border-radius:99px;border:1px solid #e4e7ec;background:#fff;font-size:12.5px;color:#667085;text-decoration:none">检测本机</a>';
+  })();
+</script>
+<div id="mask2" style="display:none;position:fixed;inset:0;background:rgba(16,24,40,.45);z-index:999;align-items:center;justify-content:center">
+ <div style="background:#fff;border-radius:14px;padding:22px 24px;width:430px;max-width:92vw">
+  <h3 style="margin:0 0 4px;font-size:16px">登记三家稿件</h3>
+  <p style="margin:0 0 14px;font-size:12px;color:#98a2b3">登记即刻启动：24h 内目标 5w 播放，预算 40w 封顶，三次换项目自动调度</p>
+  <div class="fm"><label>你的名字（提交人）· 填一次会自动记住</label><input id="s_by" placeholder="例如：迟迟"></div>
+  <div class="fm"><label>BV 号</label><input id="s_bv" placeholder="BV1xx411c7mD"></div>
+  <div class="fm"><label>备注（可选）</label><input id="s_rk" placeholder="留空则不填申请理由"></div>
+  <div id="s_msg" style="font-size:12px;color:#d92d20;min-height:18px"></div>
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <button onclick="document.getElementById('mask2').style.display='none'" style="flex:1;padding:9px;border-radius:8px;border:1px solid #d0d5dd;background:#fff;font-size:13px;cursor:pointer">取消</button>
+    <button onclick="submitSanjia()" style="flex:1;padding:9px;border-radius:8px;border:0;background:#0a7f46;color:#fff;font-size:13px;font-weight:600;cursor:pointer">立即登记并开投</button>
+  </div>
+ </div>
+</div>
+<script>
+  window.sjOpenForm=function(){
+    var box=document.getElementById('s_by');
+    try{ var saved=localStorage.getItem('sj_by'); if(saved&&!box.value) box.value=saved; }catch(e){}
+    document.getElementById('mask2').style.display='flex';
+  };
+  window.submitSanjia=function(){
+    var bv=document.getElementById('s_bv').value.trim();
+    var msg=document.getElementById('s_msg');
+    if(!/^BV[0-9A-Za-z]{8,12}$/.test(bv)){msg.textContent='BV 号格式不对';return;}
+    var byv=((document.getElementById('s_by')||{}).value||'').trim();
+    if(!byv){msg.textContent='请填写你的名字，方便对账';return;}
+    try{ localStorage.setItem('sj_by',byv); }catch(e){}
+    var by=(document.getElementById('s_by')||{}).value||'';
+    go('act=new_sanjia&bvid='+encodeURIComponent(bv)+'&reason='+encodeURIComponent(document.getElementById('s_rk').value||'')+'&by='+encodeURIComponent(by.trim()));
+  };
+</script>
+<script>
+// 演示页：拦截所有执行动作，绝不真下单
+window.go=function(){alert("这是演示画面，不会真的提交或下单");};
+window.sjOpenForm=function(){alert("这是演示画面，登记入口在真实页面");};
+</script>
+</body></html>
