@@ -294,7 +294,36 @@ setInterval(reloadData,60000);
   // 跳转式执行（浏览器禁止 https→http 请求，但允许顶级跳转）
   var API='http://127.0.0.1:7788';
   var BACK='https://sites.bilibili.co/zhengmei-daily-report/tianma/index.html';
-  function go(qs){ location.href=(window.SJ_EXEC||API)+'/do?'+qs+'&k='+(window.SJ_KEY||'')+'&back='+encodeURIComponent(BACK); }
+  function sjToast(text,bad){
+    var t=document.getElementById('sj_toast');
+    if(!t){ t=document.createElement('div'); t.id='sj_toast';
+      t.style.cssText='position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:9999;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(16,24,40,.18);display:none';
+      document.body.appendChild(t); }
+    t.style.background=bad?'#fef3f2':'#ecfdf3';
+    t.style.color=bad?'#d92d20':'#039855';
+    t.style.border='1px solid '+(bad?'#fda29b':'#6ce9a6');
+    t.textContent=text; t.style.display='block';
+    clearTimeout(t._tm); t._tm=setTimeout(function(){ t.style.display='none'; },5000);
+  }
+  async function sjDo(qs){
+    var cands=[];
+    try{ if(location.origin&&location.origin.indexOf('http')===0) cands.push(''); }catch(e){}
+    if(typeof TUNNEL!=='undefined'&&TUNNEL) cands.push(TUNNEL);
+    if(window.SJ_EXEC) cands.push(window.SJ_EXEC);
+    if(window.API) cands.push(window.API);
+    var seen={},list=[];
+    cands.forEach(function(x){ if(!seen[x]){ seen[x]=1; list.push(x); } });
+    var lastErr=null;
+    for(var i=0;i<list.length;i++){
+      try{
+        var r=await fetch(list[i]+'/do?'+qs+'&json=1',{cache:'no-store'});
+        var j=await r.json();
+        if(j&&typeof j.ok!=='undefined') return j;
+        lastErr=new Error((j&&j.msg)||'响应异常');
+      }catch(e){ lastErr=e; }
+    }
+    throw lastErr||new Error('所有执行地址都不可达');
+  }  function go(qs){ location.href=(window.SJ_EXEC||API)+'/do?'+qs+'&k='+(window.SJ_KEY||'')+'&back='+encodeURIComponent(BACK); }
 </script>
 <div id="mask2" style="display:none;position:fixed;inset:0;background:rgba(16,24,40,.45);z-index:999;align-items:center;justify-content:center">
  <div style="background:#fff;border-radius:14px;padding:22px 24px;width:430px;max-width:92vw">
@@ -306,7 +335,7 @@ setInterval(reloadData,60000);
   <div id="s_msg" style="font-size:12px;color:#d92d20;min-height:18px"></div>
   <div style="display:flex;gap:8px;margin-top:12px">
     <button onclick="document.getElementById('mask2').style.display='none'" style="flex:1;padding:9px;border-radius:8px;border:1px solid #d0d5dd;background:#fff;font-size:13px;cursor:pointer">取消</button>
-    <button onclick="submitSanjia()" style="flex:1;padding:9px;border-radius:8px;border:0;background:#0a7f46;color:#fff;font-size:13px;font-weight:600;cursor:pointer">立即登记并开投</button>
+    <button id="s_go" onclick="submitSanjia()" style="flex:1;padding:9px;border-radius:8px;border:0;background:#0a7f46;color:#fff;font-size:13px;font-weight:600;cursor:pointer">立即登记并开投</button>
   </div>
  </div>
 </div>
@@ -314,9 +343,11 @@ setInterval(reloadData,60000);
   window.sjOpenForm=function(){ document.getElementById('mask2').style.display='flex'; };
   window.sjStop=function(id){
     if(!confirm('确定停止这条稿件并下线所有卡片？')) return;
-    location.href=(window.SJ_EXEC||API)+'/do?act=sanjia_stop&taskId='+encodeURIComponent(id)+'&k='+(window.SJ_KEY||'')+'&back='+encodeURIComponent(BACK);
-  };
-  function sjStateText(s){
+    sjDo('act=sanjia_stop&taskId='+encodeURIComponent(id)).then(function(j){
+      if(j.ok){ sjToast(j.msg||'已停止，卡片下线中'); fetchLive().then(renderSj); }
+      else sjToast(j.msg||'停止失败',true);
+    }).catch(function(e){ sjToast('执行通道不可达：'+(e&&e.message||e),true); });
+  };  function sjStateText(s){
     var m={0:'待投放',1:'投放中',2:'已结束',3:'已暂停',4:'投放中',5:'已下线',6:'待审核'};
     return (m[s]!==undefined)?m[s]:('状态'+s);
   }
@@ -375,12 +406,36 @@ setInterval(reloadData,60000);
         +'<div style="color:#98a2b3">'+r+' · 播放 '+sjWan(t.v)+' · 消耗天马 '+sjWan(t.tianmaSpent)+' · 提交人 '+(t.requester||'未填')+'</div>');
     }).join('');
   };  window.submitSanjia=function(){
+    var btn=document.getElementById('s_go');
     var bv=document.getElementById('s_bv').value.trim();
     var msg=document.getElementById('s_msg');
     if(!/^BV[0-9A-Za-z]{8,12}$/.test(bv)){msg.textContent='BV 号格式不对';return;}
     var by=document.getElementById('s_by')?document.getElementById('s_by').value.trim():'';
     if(by){ try{localStorage.setItem('sj_by',by);}catch(e){} }
-    go('act=new_sanjia&bvid='+encodeURIComponent(bv)+'&by='+encodeURIComponent(by)+'&reason='+encodeURIComponent(document.getElementById('s_rk').value||''));
+    var qs='act=new_sanjia&bvid='+encodeURIComponent(bv)
+      +'&by='+encodeURIComponent(by)
+      +'&reason='+encodeURIComponent(document.getElementById('s_rk').value||'')
+      +(document.getElementById('s_nn')&&document.getElementById('s_nn').checked?'&nn=1':'');
+    if(btn){ btn.disabled=true; btn.textContent='提交中…'; }
+    msg.textContent='';
+    sjDo(qs).then(function(j){
+      if(btn){ btn.disabled=false; btn.textContent='立即登记并开投'; }
+      if(j.ok){
+        var m2=document.getElementById('mask2'); if(m2) m2.style.display='none';
+        document.getElementById('s_bv').value='';
+        var rk=document.getElementById('s_rk'); if(rk) rk.value='';
+        var cnt=(j.running||[]).length;
+        sjToast('已登记 '+bv+'，马上开第 1 轮 · 在跑 '+cnt+' 条');
+        fetchLive().then(renderSj);
+      } else {
+        msg.textContent=j.msg||'登记失败';
+        sjToast(j.msg||'登记失败',true);
+      }
+    }).catch(function(e){
+      if(btn){ btn.disabled=false; btn.textContent='立即登记并开投'; }
+      msg.textContent='执行通道不可达：'+(e&&e.message||e);
+      sjToast('执行通道不可达，可用地址都试过了',true);
+    });
   };
 </script>
 </body></html>
