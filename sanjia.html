@@ -197,23 +197,65 @@ function sjCard(t){
   box.innerHTML=h;
 }
 // ===== 实时通道：优先走隧道拿实时数据；拿不到自动回退静态快照 =====
-var TUNNEL=(function(){try{var q=new URLSearchParams(location.search).get('tunnel');if(q){localStorage.setItem('sj_tunnel',q);return q.replace(/\/+$/,'');}return (localStorage.getItem('sj_tunnel')||'https://seo-fit-consortium-henry.trycloudflare.com').replace(/\/+$/,'');}catch(e){return 'https://seo-fit-consortium-henry.trycloudflare.com';}})();
-var LIVE=null, LIVE_OK=false, LIVE_AT=0;
-async function fetchLive(){
-  if(!TUNNEL) return false;
-  try{
-    var ctl=new AbortController(); var tm=setTimeout(function(){ctl.abort();},6000);
-    var r=await fetch(TUNNEL+'/api/state?live=1',{cache:'no-store',signal:ctl.signal});
-    clearTimeout(tm);
-    if(!r.ok) throw new Error('http '+r.status);
-    var j=await r.json();
-    if(!j||!j.sanjia) throw new Error('bad payload');
-    LIVE=j; LIVE_OK=true; LIVE_AT=Date.now(); return true;
-  }catch(e){ LIVE_OK=false; return false; }
+var SJ_DEFAULT_TUNNEL='https://seo-fit-consortium-henry.trycloudflare.com';
+function sjLS(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}catch(e){}}
+var TUNNEL='';
+var LIVE=null, LIVE_OK=false, LIVE_AT=0, LIVE_TRIED='';
+function sjCandidates(){
+  var q=null;try{q=new URLSearchParams(location.search).get('tunnel');}catch(e){}
+  if(q)sjLS('sj_tunnel',q.replace(/\/+$/,''));
+  var list=[];var a=sjLS('sj_tunnel'),b=sjLS('sj_tunnel_ok'),c=SJ_DEFAULT_TUNNEL;
+  if(a)list.push(a);
+  if(b&&list.indexOf(b)<0)list.push(b);
+  if(list.indexOf(c)<0)list.push(c);
+  return list.map(function(x){return String(x).replace(/\/+$/,'');});
 }
-var DEMO=false, AUTO_DEMO=false;
+async function fetchLive(){
+  var list=sjCandidates();
+  for(var i=0;i<list.length;i++){
+    var u=list[i];
+    try{
+      var ctl=new AbortController();var tm=setTimeout(function(){ctl.abort();},5000);
+      var r=await fetch(u+'/api/state?live=1',{cache:'no-store',signal:ctl.signal});
+      clearTimeout(tm);
+      if(!r.ok) throw new Error('http '+r.status);
+      var j=await r.json();
+      if(!j||!j.sanjia) throw new Error('bad payload');
+      TUNNEL=u; sjLS('sj_tunnel_ok',u);
+      if(list[0]!==u) sjLS('sj_tunnel',u);
+      LIVE=j; LIVE_OK=true; LIVE_AT=Date.now(); LIVE_TRIED=list.join(' | ');
+      return true;
+    }catch(e){}
+  }
+  LIVE_OK=false; LIVE_TRIED=list.join(' | '); return false;
+}
+function sjStateBar(){
+  var el=document.getElementById('sj_net'); if(!el) return;
+  if(LIVE_OK){
+    el.innerHTML='<span style="color:#039855;font-weight:700">● 实时</span>'
+      +'<span style="color:#98a2b3;margin-left:8px;font-size:12px">'+TUNNEL.replace('https://','')+'</span>'
+      +'<span style="color:#98a2b3;margin-left:10px;font-size:12px;cursor:pointer" onclick="sjResetTunnel()">改地址</span>';
+    return;
+  }
+  el.innerHTML='<span style="color:#d92d20;font-weight:700">● 实时通道不通</span>'
+    +'<span style="color:#98a2b3;margin-left:8px;font-size:12px">正在显示快照</span>'
+    +'<input id="sj_tun_in" placeholder="粘贴新的隧道地址" style="margin-left:10px;width:300px;padding:4px 8px;border:1px solid #d0d5dd;border-radius:6px;font-size:12px">'
+    +'<button onclick="sjSetTunnel()" style="margin-left:6px;padding:4px 12px;border:1px solid #165DFF;background:#165DFF;color:#fff;border-radius:6px;font-size:12px;cursor:pointer">更新</button>';
+}
+function sjSetTunnel(){var v=(document.getElementById('sj_tun_in').value||'').trim();if(!v)return;sjLS('sj_tunnel',v.replace(/\/+$/,''));location.reload();}
+function sjResetTunnel(){var v=prompt('当前隧道地址（服务重启后会变，改成新的即可）',TUNNEL||'');if(v===null)return;v=String(v).trim().replace(/\/+$/,'');if(!v)return;sjLS('sj_tunnel',v);location.reload();}var DEMO=false, AUTO_DEMO=false;
 function pickSjData(){ if(DEMO) return window.TIANMA_DEMO_SANJIA||{sanjia:[],alerts:[]}; if(LIVE&&LIVE.sanjia) return {sanjia:LIVE.sanjia,alerts:LIVE.alerts||[]}; return window.TIANMA_SANJIA||{sanjia:[],alerts:[]}; }
-function renderSj(){ renderSanjia(pickSjData()); var f=document.getElementById('foot'); if(f){ f.textContent = LIVE_OK ? ('实时数据 · '+new Date(LIVE_AT).toLocaleTimeString('zh-CN')+' · 每 20 秒自动刷新') : ''; } if(f&&!LIVE_OK&&window.TIANMA_SANJIA&&window.TIANMA_SANJIA.publishedAt){ f.textContent='数据快照 '+new Date(window.TIANMA_SANJIA.publishedAt).toLocaleString('zh-CN'); } }
+function renderSj(){
+  renderSanjia(pickSjData());
+  sjStateBar();
+  var f=document.getElementById('foot');
+  if(!f) return;
+  if(LIVE_OK){ f.textContent='实时数据 · '+new Date(LIVE_AT).toLocaleTimeString('zh-CN')+' · 每 20 秒自动刷新'; }
+  else if(window.TIANMA_SANJIA&&window.TIANMA_SANJIA.publishedAt){
+    var age=Math.max(0,Math.round((Date.now()-window.TIANMA_SANJIA.publishedAt)/3600000));
+    f.textContent='数据快照 '+new Date(window.TIANMA_SANJIA.publishedAt).toLocaleString('zh-CN')+'（约 '+age+' 小时前）· 实时通道不通，可在上方改隧道地址';
+  } else { f.textContent=''; }
+}
 function toggleDemo(){ DEMO=!DEMO; AUTO_DEMO=false; paintDemoBar(); renderSj(); }
 function paintDemoBar(){
   var el2=document.getElementById('demoBar'); if(!el2) return;
@@ -223,7 +265,8 @@ function paintDemoBar(){
    +'<span style="margin-left:10px;color:#8a6100">这是样张，用来看页面长什么样</span>'
    +'<button onclick="toggleDemo()" style="margin-left:12px;border:1px solid #f5d78e;background:#fff;color:#b54708;border-radius:6px;padding:2px 10px;font-size:12px;cursor:pointer">切回真实数据</button>';
 }
-(function(){ var box=document.getElementById('sanjia'); if(!box) return; var d=document.createElement('div'); d.id='demoBar'; d.style.cssText='display:none;margin:0 0 14px;background:#fffaf0;border:1px solid #f5d78e;border-radius:10px;padding:10px 14px;font-size:12.5px'; box.parentNode.insertBefore(d,box); })();
+(function(){ var box=document.getElementById('sanjia'); if(!box) return; var d=document.createElement('div'); d.id='demoBar'; d.style.cssText='display:none;margin:0 0 14px;background:#fffaf0;border:1px solid #f5d78e;border-radius:10px;padding:10px 14px;font-size:12.5px'; box.parentNode.insertBefore(d,box);
+  var n=document.createElement('div'); n.id='sj_net'; n.style.cssText='margin:0 0 12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px'; box.parentNode.insertBefore(n,box); })();
 (async function bootSj(){
   var got=await fetchLive();
   if(!got){ var real=window.TIANMA_SANJIA; if(!(real&&real.sanjia&&real.sanjia.length)){ DEMO=true; AUTO_DEMO=true; } }
