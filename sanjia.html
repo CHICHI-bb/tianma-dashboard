@@ -112,7 +112,7 @@ td{padding:7px 6px;border-bottom:1px solid #f5f6f8}
   <a class="back" href="./index.html">← 返回入口</a>
   <h1>三家稿件 · 自动投放</h1>
   <p class="lead">24h 内过 5w · 单篇 40w 封顶 · 首选 AI 天马，强保量只在推不过时保底。播放每 15 分钟、后台消耗每小时更新。</p>
-  <div style="margin:0 0 14px;display:flex;gap:8px;align-items:center"><input id="sj_search" placeholder="搜 BV / av 号查投放状态" onkeydown="if(event.key==='Enter')sjSearch()" style="flex:1;max-width:300px;padding:8px 12px;border:1px solid #d0d5dd;border-radius:8px;font-size:13px"><button onclick="sjSearch()" style="padding:8px 14px;border:1px solid #165DFF;background:#165DFF;color:#fff;border-radius:8px;font-size:13px;cursor:pointer">搜索</button></div><div id="sj_result"></div><div id="sanjia"></div>
+  <div style="margin:0 0 14px;display:flex;gap:8px;align-items:center"><input id="sj_search" placeholder="搜 BV / av 号查投放状态" onkeydown="if(event.key==='Enter')sjSearch()" style="flex:1;max-width:300px;padding:8px 12px;border:1px solid #d0d5dd;border-radius:8px;font-size:13px"><button onclick="sjSearch()" style="padding:8px 14px;border:1px solid #165DFF;background:#165DFF;color:#fff;border-radius:8px;font-size:13px;cursor:pointer">搜索</button></div><div id="sj_pools"></div><div id="sj_result"></div><div id="sanjia"></div>
   <div class="foot" id="foot"></div>
 </div>
 <script src="data/sanjia.js"></script>
@@ -277,6 +277,11 @@ function paintDemoBar(){
 (function(){ var box=document.getElementById('sanjia'); if(!box) return; var d=document.createElement('div'); d.id='demoBar'; d.style.cssText='display:none;margin:0 0 14px;background:#fffaf0;border:1px solid #f5d78e;border-radius:10px;padding:10px 14px;font-size:12.5px'; box.parentNode.insertBefore(d,box);
   var n=document.createElement('div'); n.id='sj_net'; n.style.cssText='margin:0 0 12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px'; box.parentNode.insertBefore(n,box); })();
 (async function bootSj(){
+  const sjPoolsBoot=function(){ try{ const p=sjPoolsRefresh(); if(p&&p.catch) p.catch(function(){}); }catch(e){} };
+  sjPoolsBoot();
+  setInterval(sjPoolsBoot,10*60*1000);
+  setTimeout(function(){ const e0=document.getElementById('sj_pools'); if(e0&&!e0.textContent) sjPoolsBoot(); },4000);
+  setTimeout(function(){ const e0=document.getElementById('sj_pools'); if(e0&&!e0.textContent) sjPoolsRefresh(1).catch(function(){}); },9000);
   var got=await fetchLive();
   if(!got){ var real=window.TIANMA_SANJIA; if(!(real&&real.sanjia&&real.sanjia.length)){ DEMO=true; AUTO_DEMO=true; } }
   paintDemoBar(); renderSj();
@@ -357,7 +362,37 @@ setInterval(reloadData,60000);
     return fetch(base+path).then(function(r){return r.json();});
   }
   function sjBox(inner){ return '<div style="padding:10px 14px;border:1px solid #e4e7ec;border-radius:8px;margin-bottom:8px;font-size:12.5px">'+inner+'</div>'; }
-  function liveLookup(bv,box,raw){
+  function sjPoolsRender(d,at){
+    const el=document.getElementById('sj_pools'); if(!el) return;
+    if(!d||!d.ok||!d.pools){
+      el.innerHTML='<div style="font-size:12px;color:#d92d20;background:#fff7f7;border:1px solid #f0c0c0;border-radius:8px;padding:6px 10px;margin:0 0 12px">三池余额获取失败：'+((d&&d.err)||'未知')+' · <span style="cursor:pointer;color:#165DFF" onclick="sjPoolsRefresh(1)">重试</span></div>';
+      return;
+    }
+    const card=function(id){
+      const q=d.pools[id];
+      if(!q||!q.ok) return '<div style="background:#fff;border:1px solid #e4e7ec;border-radius:10px;padding:8px 10px;font-size:12px">项目 '+id+'：无数据</div>';
+      const cw=(q.commonRemain||0)/10000, sw=(q.strongRemain||0)/10000;
+      const cc=cw<10?'#d92d20':(cw<50?'#b54708':'#039855');
+      const sc=sw<1?'#d92d20':(sw<10?'#b54708':'#039855');
+      return '<div style="background:#fff;border:1px solid #e4e7ec;border-radius:10px;padding:8px 10px;font-size:12px">'
+        +'<div style="font-weight:700;color:#101828;font-size:12.5px">'+id+' <span style="color:#98a2b3;font-weight:400;font-size:11px">'+(q.name||'')+'</span></div>'
+        +'<div style="margin-top:4px;color:#475467">普通剩余 <b style="color:'+cc+'">'+cw.toFixed(1)+'w</b></div>'
+        +'<div style="color:#475467">强保剩余 <b style="color:'+sc+'">'+sw.toFixed(2)+'w</b></div>'
+        +'</div>';
+    };
+    const html='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin:0 0 6px">'
+      +card(6465)+card(6760)+card(6759)
+      +'</div><div style="font-size:11px;color:#98a2b3;margin:0 0 10px">强保额度=池子总量×20% · 周期数据 '+at+' · <span style="cursor:pointer;color:#165DFF" onclick="sjPoolsRefresh(1)">刷新</span></div>';
+    el.innerHTML=html;
+  }
+  async function sjPoolsRefresh(fresh){
+    const el=document.getElementById('sj_pools'); if(!el) return;
+    if(fresh) el.innerHTML='<div style="font-size:12px;color:#98a2b3;margin:0 0 12px">三池余额刷新中…（首次约 3~5 秒）</div>';
+    try{
+      const d=await sjApi('/api/pools'+(fresh?'?fresh=1':''));
+      sjPoolsRender(d,new Date().toLocaleTimeString('zh-CN'));
+    }catch(e){ sjPoolsRender({ok:false,err:(e&&e.message)||String(e)}); }
+  }  function liveLookup(bv,box,raw){
     box.innerHTML=sjBox('<span style="color:#475467">本地无登记，正在查天马后台…（首次约 20~40 秒）</span>');
     sjApi('/api/lookup?bv='+encodeURIComponent(bv)).then(function(d){
       if(!d||!d.ok){
