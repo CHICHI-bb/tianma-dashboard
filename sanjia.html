@@ -112,7 +112,7 @@ td{padding:7px 6px;border-bottom:1px solid #f5f6f8}
   <a class="back" href="./index.html">← 返回入口</a>
   <h1>三家稿件 · 自动投放</h1>
   <p class="lead">24h 内过 5w · 单篇 40w 封顶 · 首选 AI 天马，强保量只在推不过时保底。播放每 15 分钟、后台消耗每小时更新。</p>
-  <div style="margin:0 0 14px;display:flex;gap:8px;align-items:center"><input id="sj_search" placeholder="搜 BV 查投放状态" onkeydown="if(event.key==='Enter')sjSearch()" style="flex:1;max-width:300px;padding:8px 12px;border:1px solid #d0d5dd;border-radius:8px;font-size:13px"><button onclick="sjSearch()" style="padding:8px 14px;border:1px solid #165DFF;background:#165DFF;color:#fff;border-radius:8px;font-size:13px;cursor:pointer">搜索</button></div><div id="sj_result"></div><div id="sanjia"></div>
+  <div style="margin:0 0 14px;display:flex;gap:8px;align-items:center"><input id="sj_search" placeholder="搜 BV / av 号查投放状态" onkeydown="if(event.key==='Enter')sjSearch()" style="flex:1;max-width:300px;padding:8px 12px;border:1px solid #d0d5dd;border-radius:8px;font-size:13px"><button onclick="sjSearch()" style="padding:8px 14px;border:1px solid #165DFF;background:#165DFF;color:#fff;border-radius:8px;font-size:13px;cursor:pointer">搜索</button></div><div id="sj_result"></div><div id="sanjia"></div>
   <div class="foot" id="foot"></div>
 </div>
 <script src="data/sanjia.js"></script>
@@ -330,7 +330,7 @@ setInterval(reloadData,60000);
   <h3 style="margin:0 0 4px;font-size:16px">登记三家稿件</h3>
   <p style="margin:0 0 14px;font-size:12px;color:#98a2b3">登记即刻启动：24h 内目标 5w 播放，预算 40w 封顶，三次换项目自动调度</p>
   <div class="fm"><label>提交人（选填）</label><input id="s_by" placeholder="首次填写后自动记住"></div>
-  <div class="fm"><label>BV 号</label><input id="s_bv" placeholder="BV1xx411c7mD"></div>
+  <div class="fm"><label>BV 号 / av 号</label><input id="s_bv" placeholder="BV1xx411c7mD 或 av 号纯数字"></div>
   <div class="fm"><label>备注（可选）</label><input id="s_rk" placeholder="留空则不填申请理由"></div>
   <div id="s_msg" style="font-size:12px;color:#d92d20;min-height:18px"></div>
   <div style="display:flex;gap:8px;margin-top:12px">
@@ -409,7 +409,7 @@ setInterval(reloadData,60000);
     var btn=document.getElementById('s_go');
     var bv=document.getElementById('s_bv').value.trim();
     var msg=document.getElementById('s_msg');
-    if(!/^BV[0-9A-Za-z]{8,12}$/.test(bv)){msg.textContent='BV 号格式不对';return;}
+    if(!/^(BV[0-9A-Za-z]{8,12}|(?:av)?\d{4,20})$/i.test(bv)){msg.textContent='BV 号或 av 号格式不对';return;}
     var by=document.getElementById('s_by')?document.getElementById('s_by').value.trim():'';
     if(by){ try{localStorage.setItem('sj_by',by);}catch(e){} }
     var qs='act=new_sanjia&bvid='+encodeURIComponent(bv)
