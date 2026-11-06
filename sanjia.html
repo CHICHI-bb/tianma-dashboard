@@ -199,22 +199,12 @@ function sjDur(t){
   var h=head.replace('<small id="sj_sum"></small>','<small>在跑 <b>'+live.length+'</b> 篇 · 24h 过关 <b>'+okCount+'</b> 篇 · 单篇 40w 封顶 · 数据 '+sjTime+'</small>');
   if(alerts.length){ h+='<div class="sj-alert">'+alerts.map(function(a){return '<div>⚠ '+a.bvid+' · '+a.text+'</div>';}).join('')+'</div>'; }
   if(live.length){
-    var ZONES=[{p:6465,n:'\u592e\u89c6\u65b0\u95fb\u4e13\u9879'},{p:6759,n:'\u515a\u592e\u5a92\u8d44\u8baf'},{p:6760,n:'\u8d44\u8baf-\u70ed'}];
-    var sjCurProj=function(t){ try{ if(t.rounds&&t.rounds.length){ var lr=t.rounds[t.rounds.length-1]; if(lr&&lr.project) return Number(lr.project); } }catch(e){} try{ if(t.nextPlan&&t.nextPlan.project) return Number(t.nextPlan.project); }catch(e){} return 0; };
-    var zmap={};
-    live.forEach(function(t){ var pp=sjCurProj(t); (zmap[pp]=zmap[pp]||[]).push(t); });
-    var zused={};
-    ZONES.forEach(function(z){
-      zused[z.p]=1;
-      var arr=zmap[z.p]||[]; if(!arr.length) return;
-      arr.sort(function(a,b){return (b.v||0)-(a.v||0);});
-      h+='<div class="sj-zone" style="margin:16px 0 8px;font-size:12.5px;font-weight:700;color:#475467">'+z.n+' <span style="font-weight:400;color:#98a2b3">· \u5728\u8dd1 '+arr.length+'</span></div><div class="sj-list">'+arr.map(sjCard).join('')+'</div>';
-    });
-    Object.keys(zmap).forEach(function(k){
-      if(zused[k]) return;
-      var arr=zmap[k]; arr.sort(function(a,b){return (b.v||0)-(a.v||0);});
-      var nm=(k==='0')?'\u5f85\u5f00\u8f6e':('\u6c60 '+k);
-      h+='<div class="sj-zone" style="margin:16px 0 8px;font-size:12.5px;font-weight:700;color:#475467">'+nm+' <span style="font-weight:400;color:#98a2b3">· \u5728\u8dd1 '+arr.length+'</span></div><div class="sj-list">'+arr.map(sjCard).join('')+'</div>';
+    var amap={};
+    live.forEach(function(t){ var a=(t.author&&String(t.author).trim())||'\u672a\u77e5up\u4e3b'; (amap[a]=amap[a]||[]).push(t); });
+    var anames=Object.keys(amap).sort(function(a,b){ return (amap[b].length-amap[a].length)||a.localeCompare(b,'zh'); });
+    anames.forEach(function(a){
+      var arr=amap[a]; arr.sort(function(x,y){ return (y.v||0)-(x.v||0); });
+      h+='<div class="sj-zone" style="margin:16px 0 8px;font-size:12.5px;font-weight:700;color:#475467">'+a+' <span style="font-weight:400;color:#98a2b3">· \u5728\u8dd1 '+arr.length+'</span></div><div class="sj-list">'+arr.map(sjCard).join('')+'</div>';
     });
   }
   if(dead.length){
