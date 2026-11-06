@@ -112,10 +112,10 @@ td{padding:7px 6px;border-bottom:1px solid #f5f6f8}
   <a class="back" href="./index.html">← 返回入口</a>
   <h1>三家稿件 · 自动投放</h1>
   <p class="lead">24h 内过 5w · 单篇 40w 封顶 · 首选 AI 天马，强保量只在推不过时保底。播放每 15 分钟、后台消耗每小时更新。</p>
-  <div style="margin:0 0 14px;display:flex;gap:8px;align-items:center"><input id="sj_search" placeholder="搜 BV / av 号查投放状态" onkeydown="if(event.key==='Enter')sjSearch()" style="flex:1;max-width:300px;padding:8px 12px;border:1px solid #d0d5dd;border-radius:8px;font-size:13px"><button onclick="sjSearch()" style="padding:8px 14px;border:1px solid #165DFF;background:#165DFF;color:#fff;border-radius:8px;font-size:13px;cursor:pointer">搜索</button></div><div id="sj_pools"></div><div id="sj_result"></div><div id="sanjia"></div>
+  <div style="margin:0 0 14px;display:flex;gap:8px;align-items:center"><input id="sj_search" placeholder="搜 BV / av 号查投放状态" onkeydown="if(event.key==='Enter')sjSearch()" style="flex:1;max-width:300px;padding:8px 12px;border:1px solid #d0d5dd;border-radius:8px;font-size:13px"><button onclick="sjSearch()" style="padding:8px 14px;border:1px solid #165DFF;background:#165DFF;color:#fff;border-radius:8px;font-size:13px;cursor:pointer">搜索</button></div><div id="sj_result"></div><div id="sanjia"></div>
   <div class="foot" id="foot"></div>
 </div>
-<script src="data/sanjia.js"></script>
+<script>(function(){function norm(d){if(d&&d.sanjia&&!Array.isArray(d.sanjia)){var a=[];for(var k in d.sanjia){if(Object.prototype.hasOwnProperty.call(d.sanjia,k))a.push(d.sanjia[k]);}d.sanjia=a;}return d;}fetch("data/sanjia.js?cb="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():Promise.reject(new Error("http "+r.status));}).then(function(s){var d=null;try{d=norm(JSON.parse(s.replace(/^[\s\S]*?window\.TIANMA_SANJIA\s*=\s*/,"").replace(/;\s*$/,"").trim()));}catch(e){}if(!d){try{(0,eval)(s);norm(window.TIANMA_SANJIA);}catch(e1){return;}}else{window.TIANMA_SANJIA=d;}var real=window.TIANMA_SANJIA;if(AUTO_DEMO&&real&&real.sanjia&&real.sanjia.length){DEMO=false;AUTO_DEMO=false;paintDemoBar();}if(window.renderSj){try{renderSj();}catch(e2){}}}).catch(function(){});})();</script>
 <script src="data/demo-sanjia.js"></script>
 <script>
 // ================= 三家稿件 =================
@@ -147,7 +147,7 @@ function sjPlanStrip(t){
 function sjDur(t){
   var st=+new Date(t.registeredAt||t.startAt||t.createdAt);
   if(!st||isNaN(st)) return '';
-  var en=(t.status!=='running')?(t.doneAt||t.closedAt||t.stoppedAt||Date.now()):Date.now();
+  var en=(t.status!=='running')?(t.doneAt||t.closedAt||t.stoppedAt||(t.samples&&t.samples.length?t.samples[t.samples.length-1].t:Date.now())):Date.now();
   var h=(en-st)/3600000;
   if(isNaN(h)||h<0) return '';
   if(h<1) return Math.max(1,Math.round(h*60))+'m';
@@ -162,14 +162,14 @@ function sjDur(t){
     var tag=(t.status==='done')?'已过 5w':(t.status==='stopped'?'临时下线':'已收尾');
     return '<div class="sj done">'
       +'<div class="sj-top"><a class="sj-bv" href="https://www.bilibili.com/video/'+bv+'" target="_blank">'+bv+'</a>'
-      +'<span class="tag2 done">'+tag+'</span></div>'
++'<span class="tag2 done">'+tag+'</span>'+(t.zero?'<span class="tag2" style="background:#fef4e6;color:#b54708;margin-left:4px">涉0</span>':'')+'</div>'
       +'<span class="sj-title">'+String(t.title||'').slice(0,60)+'</span>'
       +'<span class="sj-meta">消耗天马 '+sjWan(spent)+' · 耗时 '+sjDur(t)+'</span>'
       +'</div>';
   }
   return '<div class="sj">'
     +'<div class="sj-top"><a class="sj-bv" href="https://www.bilibili.com/video/'+bv+'" target="_blank">'+bv+'</a>'
-    +'<span class="tag2 run">投放中</span><span style="font-size:11px;color:#667085;background:#f5f6f8;padding:2px 7px;border-radius:6px;white-space:nowrap">'+sjDur(t)+'</span></div>'
+    +'<span class="tag2 run">投放中</span>'+(t.zero?'<span class="tag2" style="background:#fef4e6;color:#b54708">涉0</span>':'')+'<span style="font-size:11px;color:#667085;background:#f5f6f8;padding:2px 7px;border-radius:6px;white-space:nowrap">'+sjDur(t)+'</span></div>'
     +'<a class="sj-title" href="https://www.bilibili.com/video/'+bv+'" target="_blank" style="text-decoration:none">'+String(t.title||'')+'</a>'
     +'<div class="mini">'
     +'<span class="m"><small>当前播放</small><b>'+sjWan(v)+'<i> / 5w</i></b></span>'
@@ -180,7 +180,7 @@ function sjDur(t){
     +'</div>';
 }function renderSanjia(D){
   var box=document.getElementById('sanjia'); if(!box) return;
-  var arr=(D.sanjia||[]).slice();
+  var raw0=D&&D.sanjia;var arr=Array.isArray(raw0)?raw0.slice():(raw0?Object.keys(raw0).map(function(k){return raw0[k];}):[]);
   var alerts=(D.alerts||[]).filter(function(a){return a.level==='bad'||a.level==='warn';}).slice(0,4);
   var head='<div class="sj-head"><div class="t"><h2>三家稿件</h2><small id="sj_sum"></small></div>'
     +'<div style="display:flex;gap:8px;align-items:center">'
@@ -206,7 +206,7 @@ function sjDur(t){
   box.innerHTML=h;
 }
 // ===== 实时通道：优先走隧道拿实时数据；拿不到自动回退静态快照 =====
-var SJ_DEFAULT_TUNNEL='https://seo-fit-consortium-henry.trycloudflare.com';
+  var SJ_DEFAULT_TUNNEL='https://texts-flying-always-manufacture.trycloudflare.com';   // 服务端 tunnel-watch.js 每次换址会自动更新仓库里的 tunnel.json
 function sjLS(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}catch(e){}}
 var TUNNEL='';
 var LIVE=null, LIVE_OK=false, LIVE_AT=0, LIVE_TRIED='';
@@ -221,6 +221,11 @@ function sjCandidates(){
 }
 async function fetchLive(){
   var list=sjCandidates();
+  try{ // same-origin live first: intranet page needs no tunnel; on sites it 404s fast and falls through
+    var c0=new AbortController();var t0=setTimeout(function(){c0.abort();},4000);
+    var r0=await fetch('/api/state?live=1',{cache:'no-store',signal:c0.signal});clearTimeout(t0);
+    if(r0.ok){ var j0=await r0.json(); if(j0&&j0.sanjia){ TUNNEL=location.origin; LIVE=j0; LIVE_OK=true; LIVE_AT=Date.now(); LIVE_TRIED='same-origin'; return true; } }
+  }catch(e0){}
   for(var i=0;i<list.length;i++){
     var u=list[i];
     try{
@@ -236,6 +241,28 @@ async function fetchLive(){
       return true;
     }catch(e){}
   }
+    // 全部候选失败 → 从页面同仓发布的 tunnel.json 自动发现最新隧道地址（服务端换址自动推送）
+  try{
+    var rj=await fetch('tunnel.json?cb='+Date.now(),{cache:'no-store'});
+    if(rj.ok){
+      var jj=await rj.json();
+      var uj=jj&&jj.url?String(jj.url).replace(/\/+$/,''):'';
+      if(uj&&/^https:\/\/[a-z0-9-]+\.trycloudflare\.com/i.test(uj)&&list.indexOf(uj)<0){
+        var ctl2=new AbortController();var tm2=setTimeout(function(){ctl2.abort();},5000);
+        var r3=await fetch(uj+'/api/state?live=1',{cache:'no-store',signal:ctl2.signal});
+        clearTimeout(tm2);
+        if(r3.ok){
+          var j3=await r3.json();
+          if(j3&&j3.sanjia){
+            TUNNEL=uj; sjLS('sj_tunnel_ok',uj); sjLS('sj_tunnel',uj);
+            LIVE=j3; LIVE_OK=true; LIVE_AT=Date.now(); LIVE_TRIED=(list.join(' | ')+' | '+uj+'(tunnel.json)');
+            return true;
+          }
+        }
+      }
+    }
+  }catch(e){}
+  if(!TUNNEL){ var cl=sjCandidates(); if(cl.length) TUNNEL=cl[0]; }
   LIVE_OK=false; LIVE_TRIED=list.join(' | '); return false;
 }
 function sjStateBar(){
@@ -246,6 +273,17 @@ function sjStateBar(){
       +'<span style="color:#98a2b3;margin-left:10px;font-size:12px;cursor:pointer" onclick="sjResetTunnel()">改地址</span>';
     return;
   }
+  if(SHARED_OK){
+    el.innerHTML='<span style="color:#b54708;font-weight:700">● 共享数据</span>'
+      +'<span style="color:#98a2b3;margin-left:8px;font-size:12px">'+new Date(SHARED_AT).toLocaleTimeString('zh-CN')+' 更新 · 每 5 分钟自动同步 · 无需部署</span>';
+    return;
+  }
+  var onSites=(location.hostname||'').indexOf('sites.bilibili.co')>=0;
+  if(!LIVE_OK&&onSites){
+    el.innerHTML='<span style="color:#b54708;font-weight:700">● 快照模式</span>'
+      +'<span style="color:#98a2b3;margin-left:8px;font-size:12px">站点域名不直连隧道 · 数据定时更新 · 实时版见 GitHub Pages 或隧道直连</span>';
+    return;
+  }
   el.innerHTML='<span style="color:#d92d20;font-weight:700">● 实时通道不通</span>'
     +'<span style="color:#98a2b3;margin-left:8px;font-size:12px">正在显示快照</span>'
     +'<input id="sj_tun_in" placeholder="粘贴新的隧道地址" style="margin-left:10px;width:300px;padding:4px 8px;border:1px solid #d0d5dd;border-radius:6px;font-size:12px">'
@@ -253,13 +291,14 @@ function sjStateBar(){
 }
 function sjSetTunnel(){var v=(document.getElementById('sj_tun_in').value||'').trim();if(!v)return;sjLS('sj_tunnel',v.replace(/\/+$/,''));location.reload();}
 function sjResetTunnel(){var v=prompt('当前隧道地址（服务重启后会变，改成新的即可）',TUNNEL||'');if(v===null)return;v=String(v).trim().replace(/\/+$/,'');if(!v)return;sjLS('sj_tunnel',v);location.reload();}var DEMO=false, AUTO_DEMO=false;
-function pickSjData(){ if(DEMO) return window.TIANMA_DEMO_SANJIA||{sanjia:[],alerts:[]}; if(LIVE&&LIVE.sanjia) return {sanjia:LIVE.sanjia,alerts:LIVE.alerts||[]}; return window.TIANMA_SANJIA||{sanjia:[],alerts:[]}; }
+function pickSjData(){ if(DEMO) return window.TIANMA_DEMO_SANJIA||{sanjia:[],alerts:[]}; if(LIVE&&LIVE.sanjia) return {sanjia:LIVE.sanjia,alerts:LIVE.alerts||[]}; if(SHARED_OK&&SHARED&&SHARED.sanjia) return {sanjia:SHARED.sanjia,alerts:SHARED.alerts||[]}; return window.TIANMA_SANJIA||{sanjia:[],alerts:[]}; }
 function renderSj(){
   renderSanjia(pickSjData());
   sjStateBar();
   var f=document.getElementById('foot');
   if(!f) return;
   if(LIVE_OK){ f.textContent='实时数据 · '+new Date(LIVE_AT).toLocaleTimeString('zh-CN')+' · 每 20 秒自动刷新'; }
+  else if(SHARED_OK){ f.textContent='共享数据 · '+new Date(SHARED_AT).toLocaleTimeString('zh-CN')+' 更新 · 每 5 分钟自动同步'; }
   else if(window.TIANMA_SANJIA&&window.TIANMA_SANJIA.publishedAt){
     var age=Math.max(0,Math.round((Date.now()-window.TIANMA_SANJIA.publishedAt)/3600000));
     f.textContent='数据快照 '+new Date(window.TIANMA_SANJIA.publishedAt).toLocaleString('zh-CN')+'（约 '+age+' 小时前）· 实时通道不通，可在上方改隧道地址';
@@ -276,20 +315,40 @@ function paintDemoBar(){
 }
 (function(){ var box=document.getElementById('sanjia'); if(!box) return; var d=document.createElement('div'); d.id='demoBar'; d.style.cssText='display:none;margin:0 0 14px;background:#fffaf0;border:1px solid #f5d78e;border-radius:10px;padding:10px 14px;font-size:12.5px'; box.parentNode.insertBefore(d,box);
   var n=document.createElement('div'); n.id='sj_net'; n.style.cssText='margin:0 0 12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px'; box.parentNode.insertBefore(n,box); })();
-(async function bootSj(){
+  var SHARED=null, SHARED_OK=false, SHARED_AT=0;
+  async function loadSharedState(){
+    // ⚠️ 暂停使用：站点平台共享数据的部分 id 哈希分片损坏（写入后 get/list 都 internal_error，7/21 条不可读）。
+    // 平台修复后把下面这行 return false 删除即恢复共享数据模式（推送脚本 board-push-state.js 已就绪）。
+    return false;
+    try{
+      var mod=await import('./bitto-site-data.js');
+      var sd=mod.createBittoSiteData({manifestUrl:'../manifest.json'});
+      var rows=sd.kv('tianma/data/tasks2.json');
+      var pg=await rows.list({pageSize:200});
+      var tasks=[],meta=null;
+      (pg.records||[]).forEach(function(r){ if(!r||!r.data) return; if(r.id==='_meta'){meta=r.data;} else {tasks.push(r.data);} });
+      if(meta&&meta.taskIds&&meta.taskIds.length){ tasks=tasks.filter(function(t){ return meta.taskIds.indexOf(t.bvid)>=0; }); }
+      if(!tasks.length) return false;
+      tasks.sort(function(a,b){ return (+new Date(a.registeredAt))-(+new Date(b.registeredAt)); });
+      SHARED={sanjia:tasks,alerts:(meta&&meta.alerts)||[]}; SHARED_OK=true; SHARED_AT=meta?(meta.publishedAt||Date.now()):Date.now();
+      return true;
+    }catch(e){ try{console.log('[sj] 共享数据读取失败，回退快照：'+(e&&e.message||e));}catch(e0){} return false; }
+  }
+  (async function bootSj(){
   const sjPoolsBoot=function(){ try{ const p=sjPoolsRefresh(); if(p&&p.catch) p.catch(function(){}); }catch(e){} };
   sjPoolsBoot();
   setInterval(sjPoolsBoot,10*60*1000);
   setTimeout(function(){ const e0=document.getElementById('sj_pools'); if(e0&&!e0.textContent) sjPoolsBoot(); },4000);
   setTimeout(function(){ const e0=document.getElementById('sj_pools'); if(e0&&!e0.textContent) sjPoolsRefresh(1).catch(function(){}); },9000);
   var got=await fetchLive();
-  if(!got){ var real=window.TIANMA_SANJIA; if(!(real&&real.sanjia&&real.sanjia.length)){ DEMO=true; AUTO_DEMO=true; } }
+  if(!got){ await loadSharedState(); }
+  if(!got&&!SHARED_OK){ var real=window.TIANMA_SANJIA; if(!(real&&real.sanjia&&real.sanjia.length)){ DEMO=true; AUTO_DEMO=true; } }
   paintDemoBar(); renderSj();
   setInterval(refreshLoop,20000);
 })();
 async function refreshLoop(){
   var ok=await fetchLive();
-  if(ok){ renderSj(); } else if(!LIVE){ reloadData(); }
+  if(ok){ renderSj(); } else if(!LIVE){ var sg=await loadSharedState(); if(sg){ renderSj(); } else { reloadData(); } }
 }
 function reloadData(){ if(DEMO) return; var s=document.createElement('script');s.src='data/sanjia.js?v='+Date.now();s.onload=function(){ if(AUTO_DEMO){ var r=window.TIANMA_SANJIA; if(!(r&&r.sanjia&&r.sanjia.length)){ s.remove(); return; } DEMO=false; AUTO_DEMO=false; paintDemoBar(); } renderSj(); s.remove(); };document.body.appendChild(s);}
 setInterval(reloadData,60000);
@@ -327,6 +386,14 @@ setInterval(reloadData,60000);
         lastErr=new Error((j&&j.msg)||'响应异常');
       }catch(e){ lastErr=e; }
     }
+    // 站点域名（CSP 同源限制）无法 fetch 执行通道 → 降级为页面跳转到隧道执行，执行完点「返回看板」
+    if((location.hostname||'').indexOf('sites.bilibili.co')>=0){
+      var u=(typeof TUNNEL!=='undefined'&&TUNNEL)?TUNNEL:(window.SJ_EXEC||'');
+      if(u&&confirm('站点页无法直连执行通道，跳转到实时通道执行本操作？')){
+        location.href=u+'/do?'+qs+'&back='+encodeURIComponent(location.href);
+        return new Promise(function(){});
+      }
+    }
     throw lastErr||new Error('所有执行地址都不可达');
   }  function go(qs){ location.href=(window.SJ_EXEC||API)+'/do?'+qs+'&k='+(window.SJ_KEY||'')+'&back='+encodeURIComponent(BACK); }
 </script>
@@ -334,9 +401,9 @@ setInterval(reloadData,60000);
  <div style="background:#fff;border-radius:14px;padding:22px 24px;width:430px;max-width:92vw">
   <h3 style="margin:0 0 4px;font-size:16px">登记三家稿件</h3>
   <p style="margin:0 0 14px;font-size:12px;color:#98a2b3">登记即刻启动：24h 内目标 5w 播放，预算 40w 封顶，三次换项目自动调度</p>
-  <div class="fm"><label>提交人（选填）</label><input id="s_by" placeholder="首次填写后自动记住"></div>
+
   <div class="fm"><label>BV 号 / av 号</label><input id="s_bv" placeholder="BV1xx411c7mD 或 av 号纯数字"></div>
-  <div class="fm"><label>备注（可选）</label><input id="s_rk" placeholder="留空则不填申请理由"></div>
+  <div class="fm"><label>是否涉0（选填）</label><select id="s_zero" style="width:100%;padding:8px 10px;border:1px solid #d0d5dd;border-radius:8px;font-size:13px;background:#fff;color:#101828"><option value="">未选择（按普通投放规则）</option><option value="0">否</option><option value="1">涉0（只投强保量天马+勾选涉零）</option></select></div>
   <div id="s_msg" style="font-size:12px;color:#d92d20;min-height:18px"></div>
   <div style="display:flex;gap:8px;margin-top:12px">
     <button onclick="document.getElementById('mask2').style.display='none'" style="flex:1;padding:9px;border-radius:8px;border:1px solid #d0d5dd;background:#fff;font-size:13px;cursor:pointer">取消</button>
@@ -378,6 +445,8 @@ setInterval(reloadData,60000);
         +'<div style="font-weight:700;color:#101828;font-size:12.5px">'+id+' <span style="color:#98a2b3;font-weight:400;font-size:11px">'+(q.name||'')+'</span></div>'
         +'<div style="margin-top:4px;color:#475467">普通剩余 <b style="color:'+cc+'">'+cw.toFixed(1)+'w</b></div>'
         +'<div style="color:#475467">强保剩余 <b style="color:'+sc+'">'+sw.toFixed(2)+'w</b></div>'
+        +(d.deadPools&&d.deadPools[String(id)]&&d.deadPools[String(id)].strong?'<div style="margin-top:4px;color:#b54708">🔒 强保量已全局拉黑（所有任务不投）· 周四0点解禁</div>':'')
+        +(d.deadPools&&d.deadPools[String(id)]&&d.deadPools[String(id)].common?'<div style="margin-top:4px;color:#b54708">🔒 AI天马已全局拉黑（所有任务不投）· 周四0点解禁</div>':'')
         +'</div>';
     };
     const html='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin:0 0 6px">'
@@ -449,8 +518,9 @@ setInterval(reloadData,60000);
     if(by){ try{localStorage.setItem('sj_by',by);}catch(e){} }
     var qs='act=new_sanjia&bvid='+encodeURIComponent(bv)
       +'&by='+encodeURIComponent(by)
-      +'&reason='+encodeURIComponent(document.getElementById('s_rk').value||'')
-      +(document.getElementById('s_nn')&&document.getElementById('s_nn').checked?'&nn=1':'');
+      +'&reason='
+      +(document.getElementById('s_nn')&&document.getElementById('s_nn').checked?'&nn=1':'')
+      +(document.getElementById('s_zero')&&document.getElementById('s_zero').value==='1'?'&zero=1':'');
     if(btn){ btn.disabled=true; btn.textContent='提交中…'; }
     msg.textContent='';
     sjDo(qs).then(function(j){
@@ -460,7 +530,9 @@ setInterval(reloadData,60000);
         document.getElementById('s_bv').value='';
         var rk=document.getElementById('s_rk'); if(rk) rk.value='';
         var cnt=(j.running||[]).length;
-        sjToast('已登记 '+bv+'，马上开第 1 轮 · 在跑 '+cnt+' 条');
+        var zv=document.getElementById('s_zero'); var zeroSel=zv?zv.value:'';
+        if(zv) zv.value='';
+        sjToast('已登记 '+bv+(zeroSel==='1'?'（涉0 · 只投强保量）':'')+'，马上开第 1 轮 · 在跑 '+cnt+' 条');
         fetchLive().then(renderSj);
       } else {
         msg.textContent=j.msg||'登记失败';
