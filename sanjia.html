@@ -198,10 +198,31 @@ function sjDur(t){
   var sjTime=LIVE_OK?('实时 '+new Date(LIVE_AT).toLocaleTimeString('zh-CN')):(window.TIANMA_SANJIA&&window.TIANMA_SANJIA.publishedAt?new Date(window.TIANMA_SANJIA.publishedAt).toLocaleString('zh-CN').slice(5,17):'快照');
   var h=head.replace('<small id="sj_sum"></small>','<small>在跑 <b>'+live.length+'</b> 篇 · 24h 过关 <b>'+okCount+'</b> 篇 · 单篇 40w 封顶 · 数据 '+sjTime+'</small>');
   if(alerts.length){ h+='<div class="sj-alert">'+alerts.map(function(a){return '<div>⚠ '+a.bvid+' · '+a.text+'</div>';}).join('')+'</div>'; }
-  if(live.length){ h+='<div class="sj-list">'+live.map(sjCard).join('')+'</div>'; }
+  if(live.length){
+    var ZONES=[{p:6465,n:'\u592e\u89c6\u65b0\u95fb\u4e13\u9879'},{p:6759,n:'\u515a\u592e\u5a92\u8d44\u8baf'},{p:6760,n:'\u8d44\u8baf-\u70ed'}];
+    var sjCurProj=function(t){ try{ if(t.rounds&&t.rounds.length){ var lr=t.rounds[t.rounds.length-1]; if(lr&&lr.project) return Number(lr.project); } }catch(e){} try{ if(t.nextPlan&&t.nextPlan.project) return Number(t.nextPlan.project); }catch(e){} return 0; };
+    var zmap={};
+    live.forEach(function(t){ var pp=sjCurProj(t); (zmap[pp]=zmap[pp]||[]).push(t); });
+    var zused={};
+    ZONES.forEach(function(z){
+      zused[z.p]=1;
+      var arr=zmap[z.p]||[]; if(!arr.length) return;
+      arr.sort(function(a,b){return (b.v||0)-(a.v||0);});
+      h+='<div class="sj-zone" style="margin:16px 0 8px;font-size:12.5px;font-weight:700;color:#475467">'+z.n+' <span style="font-weight:400;color:#98a2b3">· \u5728\u8dd1 '+arr.length+'</span></div><div class="sj-list">'+arr.map(sjCard).join('')+'</div>';
+    });
+    Object.keys(zmap).forEach(function(k){
+      if(zused[k]) return;
+      var arr=zmap[k]; arr.sort(function(a,b){return (b.v||0)-(a.v||0);});
+      var nm=(k==='0')?'\u5f85\u5f00\u8f6e':('\u6c60 '+k);
+      h+='<div class="sj-zone" style="margin:16px 0 8px;font-size:12.5px;font-weight:700;color:#475467">'+nm+' <span style="font-weight:400;color:#98a2b3">· \u5728\u8dd1 '+arr.length+'</span></div><div class="sj-list">'+arr.map(sjCard).join('')+'</div>';
+    });
+  }
   if(dead.length){
-    h+='<div class="sj-head" style="margin-top:22px"><div class="t"><h2 style="font-size:15px;color:#98a2b3">已结束 · 数据保留</h2></div></div>';
-    h+='<div class="sj-list">'+dead.map(sjCard).join('')+'</div>';
+    h+='<div onclick="sjToggleDead(this)" style="margin-top:22px;cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px">'
+      +'<h2 style="font-size:15px;color:#98a2b3;margin:0">\u5df2\u7ed3\u675f \u00b7 \u6570\u636e\u4fdd\u7559</h2>'
+      +'<span style="font-size:12px;color:#98a2b3">('+dead.length+')</span>'
+      +'<span class="sj-dbtn" style="font-size:11px;color:#98a2b3;border:1px solid #e4e7ec;border-radius:6px;padding:2px 8px">\u5c55\u5f00 \u25b8</span></div>'
+      +'<div class="sj-list" style="display:none">'+dead.map(sjCard).join('')+'</div>';
   }
   box.innerHTML=h;
 }
@@ -288,6 +309,12 @@ function sjStateBar(){
     +'<span style="color:#98a2b3;margin-left:8px;font-size:12px">正在显示快照</span>'
     +'<input id="sj_tun_in" placeholder="粘贴新的隧道地址" style="margin-left:10px;width:300px;padding:4px 8px;border:1px solid #d0d5dd;border-radius:6px;font-size:12px">'
     +'<button onclick="sjSetTunnel()" style="margin-left:6px;padding:4px 12px;border:1px solid #165DFF;background:#165DFF;color:#fff;border-radius:6px;font-size:12px;cursor:pointer">更新</button>';
+}
+function sjToggleDead(hd){
+  var list=hd.nextElementSibling; if(!list) return;
+  var open=list.style.display!=='none';
+  list.style.display=open?'none':'';
+  var b=hd.querySelector('.sj-dbtn'); if(b) b.textContent=open?'\u5c55\u5f00 \u25b8':'\u6536\u8d77 \u25be';
 }
 function sjSetTunnel(){var v=(document.getElementById('sj_tun_in').value||'').trim();if(!v)return;sjLS('sj_tunnel',v.replace(/\/+$/,''));location.reload();}
 function sjResetTunnel(){var v=prompt('当前隧道地址（服务重启后会变，改成新的即可）',TUNNEL||'');if(v===null)return;v=String(v).trim().replace(/\/+$/,'');if(!v)return;sjLS('sj_tunnel',v);location.reload();}var DEMO=false, AUTO_DEMO=false;
