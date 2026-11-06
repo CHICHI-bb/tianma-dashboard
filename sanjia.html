@@ -426,6 +426,17 @@ setInterval(reloadData,60000);
  </div>
 </div>
 <script>
+  (function(){
+    var m=(location.hash||'').match(/sjr=([^&]+)/); if(!m) return;
+    var d={}; try{ d=JSON.parse(decodeURIComponent(m[1])); }catch(e){}
+    try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
+    var bar=document.createElement('div');
+    bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;padding:10px 16px;text-align:center;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(16,24,40,.08);background:'+(d.ok?'#ecfdf3':'#fff4f2')+';color:'+(d.ok?'#039855':'#d92d20');
+    bar.textContent=(d.ok?'\u2713 ':'\u2717 ')+(d.msg||'\u6267\u884c\u5b8c\u6210');
+    if(d.running&&d.running.length){ var s2=document.createElement('div'); s2.style.cssText='font-size:11.5px;font-weight:400;margin-top:3px;opacity:.85'; s2.textContent='\u5f53\u524d\u5728\u8dd1 '+d.running.length+' \u6761\uff1a'+d.running.map(function(x){return x.bvid;}).join('\u3001')+'  \uff08\u770b\u677f\u5217\u8868\u4e3a\u5feb\u7167\uff0c\u65b0\u4efb\u52a1\u4e0b\u6b21\u53d1\u5e03\u540e\u5165\u5217\uff09'; bar.appendChild(s2); }
+    document.body.appendChild(bar);
+    setTimeout(function(){ try{ bar.style.transition='opacity .6s'; bar.style.opacity='0'; setTimeout(function(){ if(bar.parentNode) bar.parentNode.removeChild(bar); },700); }catch(e){} },9000);
+  })();
   window.sjOpenForm=function(){ document.getElementById('mask2').style.display='flex'; };
   window.sjStop=function(id){
     if(!confirm('确定停止这条稿件并下线所有卡片？')) return;
