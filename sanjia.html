@@ -406,10 +406,7 @@ setInterval(reloadData,60000);
     // 站点域名（CSP 同源限制）无法 fetch 执行通道 → 降级为页面跳转到隧道执行，执行完点「返回看板」
     if((location.hostname||'').indexOf('sites.bilibili.co')>=0){
       var u=(typeof TUNNEL!=='undefined'&&TUNNEL)?TUNNEL:(window.SJ_EXEC||'');
-      if(u&&confirm('站点页无法直连执行通道，跳转到实时通道执行本操作？')){
-        location.href=u+'/do?'+qs+'&back='+encodeURIComponent(location.href);
-        return new Promise(function(){});
-      }
+      if(u){ location.href=u+'/do?'+qs+'&back='+encodeURIComponent(location.href); return new Promise(function(){}); }
     }
     throw lastErr||new Error('所有执行地址都不可达');
   }  function go(qs){ location.href=(window.SJ_EXEC||API)+'/do?'+qs+'&k='+(window.SJ_KEY||'')+'&back='+encodeURIComponent(BACK); }
