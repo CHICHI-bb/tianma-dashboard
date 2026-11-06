@@ -156,6 +156,9 @@ function sjDur(t){
 }function sjCard(t){
   var done=(t.status!=='running');
   var v=t.v||0, spent=t.tianmaSpent||0;
+  var dupTag='';
+  if(t.dupOf) dupTag='<span class="tag2" style="background:'+(t.gapNow!=null&&t.gapNow>=10000?'#ecfdf3;color:#039855':'#fef4e6;color:#b54708')+'">同质 · '+(t.gapNow==null?'？':((t.gapNow>=0?'+':'')+(Math.round(t.gapNow/1000)/10)+'w'))+'</span>';
+  else if(t.dups&&t.dups.length) dupTag='<span class="tag2" style="background:'+(t.gapNow!=null&&t.gapNow>=10000?'#ecfdf3;color:#039855':'#fee4e2;color:#d92d20')+'">主稿件 · '+(t.gapNow==null?'？':((t.gapNow>=0?'领先':'落后')+(Math.round(Math.abs(t.gapNow)/1000)/10)+'w'))+'</span>';
   var bv=t.bvid;
   var bgl='https://manager.bilibili.co/v2#/app-rec/tianma/position?card_classify=1&resource_type=1&resource_oid='+bv;
   if(done){
@@ -169,14 +172,14 @@ function sjDur(t){
   }
   return '<div class="sj">'
     +'<div class="sj-top"><a class="sj-bv" href="https://www.bilibili.com/video/'+bv+'" target="_blank">'+bv+'</a>'
-    +'<span class="tag2 run">投放中</span>'+(t.zero?'<span class="tag2" style="background:#fef4e6;color:#b54708">涉0</span>':'')+'<span style="font-size:11px;color:#667085;background:#f5f6f8;padding:2px 7px;border-radius:6px;white-space:nowrap">'+sjDur(t)+'</span></div>'
+    +'<span class="tag2 run">投放中</span>'+(t.zero?'<span class="tag2" style="background:#fef4e6;color:#b54708">涉0</span>':'')+dupTag+'<span style="font-size:11px;color:#667085;background:#f5f6f8;padding:2px 7px;border-radius:6px;white-space:nowrap">'+sjDur(t)+'</span></div>'
     +'<a class="sj-title" href="https://www.bilibili.com/video/'+bv+'" target="_blank" style="text-decoration:none">'+String(t.title||'')+'</a>'
     +'<div class="mini">'
     +'<span class="m"><small>当前播放</small><b>'+sjWan(v)+'<i> / 5w</i></b></span>'
     +'<span class="m"><small>消耗天马</small><b>'+sjWan(spent)+'</b></span>'
     +'</div>'
     +'<div class="acts2"><a class="lk" href="'+bgl+'" target="_blank">后台记录 →</a>'
-    +'<button onclick="sjStop(\''+t.id+'\')">不投了</button></div>'
+    +'<button onclick="sjAddDup(\''+t.bvid+'\')">添加同质</button><button onclick="sjStop(\''+t.id+'\')">不投了</button></div>'
     +'</div>';
 }function renderSanjia(D){
   var box=document.getElementById('sanjia'); if(!box) return;
@@ -426,16 +429,44 @@ setInterval(reloadData,60000);
  </div>
 </div>
 <script>
-  (function(){
-    var m=(location.hash||'').match(/sjr=([^&]+)/); if(!m) return;
-    var d={}; try{ d=JSON.parse(decodeURIComponent(m[1])); }catch(e){}
-    try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
+  window.sjBanner=function(ok,msg,running){
     var bar=document.createElement('div');
-    bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;padding:10px 16px;text-align:center;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(16,24,40,.08);background:'+(d.ok?'#ecfdf3':'#fff4f2')+';color:'+(d.ok?'#039855':'#d92d20');
-    bar.textContent=(d.ok?'\u2713 ':'\u2717 ')+(d.msg||'\u6267\u884c\u5b8c\u6210');
-    if(d.running&&d.running.length){ var s2=document.createElement('div'); s2.style.cssText='font-size:11.5px;font-weight:400;margin-top:3px;opacity:.85'; s2.textContent='\u5f53\u524d\u5728\u8dd1 '+d.running.length+' \u6761\uff1a'+d.running.map(function(x){return x.bvid;}).join('\u3001')+'  \uff08\u770b\u677f\u5217\u8868\u4e3a\u5feb\u7167\uff0c\u65b0\u4efb\u52a1\u4e0b\u6b21\u53d1\u5e03\u540e\u5165\u5217\uff09'; bar.appendChild(s2); }
+    bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;padding:10px 16px;text-align:center;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(16,24,40,.08);background:'+(ok?'#ecfdf3':'#fff4f2')+';color:'+(ok?'#039855':'#d92d20');
+    bar.textContent=(ok?'✓ ':'✗ ')+(msg||'执行完成');
+    if(running&&running.length){ var s2=document.createElement('div'); s2.style.cssText='font-size:11.5px;font-weight:400;margin-top:3px;opacity:.85'; s2.textContent='当前在跑 '+running.length+' 条：'+running.map(function(x){return x.bvid;}).join('、')+'（看板列表为快照，新任务下次发布后入列）'; bar.appendChild(s2); }
     document.body.appendChild(bar);
     setTimeout(function(){ try{ bar.style.transition='opacity .6s'; bar.style.opacity='0'; setTimeout(function(){ if(bar.parentNode) bar.parentNode.removeChild(bar); },700); }catch(e){} },9000);
+  };
+  (function(){ var m=(location.hash||'').match(/sjr=([^&]+)/); if(!m) return; var d={}; try{ d=JSON.parse(decodeURIComponent(m[1])); }catch(e){} try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} sjBanner(d.ok,d.msg,d.running); })();
+  window.sjAddDup=function(bvid){
+    var mk=document.getElementById('maskDup');
+    mk.dataset.master=bvid;
+    document.getElementById('dup_bv').value='';
+    document.getElementById('dup_msg').textContent='';
+    mk.style.display='flex';
+  };
+  window.sjAddDupGo=function(){
+    var mk=document.getElementById('maskDup');
+    var dup=document.getElementById('dup_bv').value.trim();
+    if(!/^BV[0-9A-Za-z]+$/.test(dup)){ document.getElementById('dup_msg').textContent='BV 号格式不对'; return; }
+    var btn=document.getElementById('dup_go'); btn.disabled=true; btn.textContent='提交中…';
+    sjDo('act=add_dup&master='+encodeURIComponent(mk.dataset.master)+'&dup='+encodeURIComponent(dup)).then(function(j){
+      mk.style.display='none'; sjBanner(!!(j&&j.ok),(j&&j.msg)||(j&&j.ok?'已建立关联':'执行失败'));
+    }).catch(function(e){ document.getElementById('dup_msg').textContent=String(e.message||e).slice(0,120); })
+    .then(function(){ btn.disabled=false; btn.textContent='建立关联'; });
+  };
+  (function(){
+    var mk=document.createElement('div'); mk.id='maskDup'; mk.style.cssText='display:none;position:fixed;inset:0;background:rgba(16,24,40,.45);z-index:999;align-items:center;justify-content:center';
+    var box=document.createElement('div'); box.style.cssText='background:#fff;border-radius:14px;padding:22px 24px;width:430px;max-width:92vw';
+    box.innerHTML='<h3 style="margin:0 0 4px;font-size:16px">添加同质稿件</h3>'
+      +'<p style="margin:0 0 14px;font-size:12px;color:#98a2b3;line-height:1.7">主稿件与同质稿件做 48h 领先监控：gap（主 − 同质）不足 1w 期间，同质暂停开新轮、主稿件自动加开加推；双方预算上限提至 70w；到期后恢复正常下线规则。</p>'
+      +'<div class="fm"><label>同质稿件 BV 号（对方也须已在本系统登记）</label><input id="dup_bv" placeholder="BV1xx411c7mD"></div>'
+      +'<div id="dup_msg" style="font-size:12px;color:#d92d20;min-height:18px"></div>'
+      +'<div style="display:flex;gap:8px;margin-top:12px"><button id="dup_cancel" style="flex:1;padding:9px;border-radius:8px;border:1px solid #d0d5dd;background:#fff;font-size:13px;cursor:pointer">取消</button><button id="dup_go" style="flex:1;padding:9px;border-radius:8px;border:0;background:#165DFF;color:#fff;font-size:13px;font-weight:600;cursor:pointer">建立关联</button></div>';
+    mk.appendChild(box);
+    document.body.appendChild(mk);
+    mk.querySelector('#dup_cancel').onclick=function(){ mk.style.display='none'; };
+    mk.querySelector('#dup_go').onclick=window.sjAddDupGo;
   })();
   window.sjOpenForm=function(){ document.getElementById('mask2').style.display='flex'; };
   window.sjStop=function(id){
