@@ -457,7 +457,7 @@ setInterval(reloadData,60000);
   };
   (function(){ var m=(location.hash||'').match(/sjr=([^&]+)/); if(!m) return; var d={}; try{ d=JSON.parse(decodeURIComponent(m[1])); }catch(e){} try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} sjBanner(d.ok,d.msg,d.running); })();
   function sjEsc(s){ return String(s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
-  var XK_SEL={}; window.__xkPasteTo='';
+  var XK_SEL={}; window.__xkPasteTo=''; window.__xkOpen=window.__xkOpen||{};
   function sjXkCurNo(t){ var n=XK_SEL[t.id]; if(!n&&t.cardSel)n=t.cardSel; if(!n&&(t.cardSets||[]).length)n=t.cardSets[0].no; return n||1; }
   function sjXkHtml(t){ try{
   if(t.cardSwapBusy) return '<div class="xkbar">🔄 换封标进行中（小卡 #'+t.cardSwapBusy+'，建物料约 1~3 分钟，完成后自动下线旧卡并按新封标重开轮）</div>';
@@ -465,22 +465,23 @@ setInterval(reloadData,60000);
   if(t.cardGen&&String(t.cardGen).indexOf('failed')===0) return '<div class="xkbar">小卡生成失败（已自动重试仍未成）· <button class="xkbtn" onclick="sjGen(\''+t.id+'\')">重试生成</button><button class="xkbtn xkgo" onclick="sjXkUp(\''+t.id+'\')">直接上传一张</button></div>';
   if(!t.cardSets||!t.cardSets.length) return '';
   window.__xk=window.__xk||{}; window.__xk[t.id]={sets:t.cardSets,bv:t.bvid};
+  if(window.__xkOpen[t.id]) window.__xkPasteTo=t.id;
   var sel=sjXkCurNo(t); var cur=null; t.cardSets.forEach(function(x){ if(x.no===sel) cur=x; }); if(!cur) cur=t.cardSets[0];
   var lab=t.materialId?('<span style="color:#039855;font-weight:600">当前封标物料 '+sjEsc(String(t.materialId))+' · 小卡 #'+t.cardSel+'</span>'):'封标小卡';
-  var h='<details class="xkfold" ontoggle="sjXkFold(\''+t.id+'\',this.open)">';
-  h+='<summary>'+lab+' '+t.cardSets.length+' 张 · 已选 #'+sel+'（点开对比/选卡，面板开着时 Ctrl+V 可直接传图）</summary>';
+  var h='<details class="xkfold"'+(window.__xkOpen[t.id]?' open':'')+' ontoggle="sjXkFold(\''+t.id+'\',this.open)">';
+  h+='<summary>'+lab+' '+t.cardSets.length+' 张 · 已选 #'+sel+'（单击选卡带文案 · 双击看大图 · Ctrl+V 传图）</summary>';
   h+='<div class="xkstrip">';
-  t.cardSets.forEach(function(x){ h+='<span class="xkmini'+(x.no===sel?' on':'')+(x.up?' up':'')+'" onclick="sjXkView(\''+t.id+'\','+x.no+')" title="'+(x.up?('自主上传 · 小卡 '+x.no+'（再传可覆盖）'):('第 '+x.no+' 套 · '+x.t+'s 截帧'))+'"><img src="'+(x.thumb||'')+'" alt=""><b>'+(x.up?('传'+x.no):x.no)+'</b></span>'; });
+  t.cardSets.forEach(function(x){ h+='<span class="xkmini'+(x.no===sel?' on':'')+(x.up?' up':'')+'" onclick="sjXkPick(\''+t.id+'\','+x.no+',event)" ondblclick="sjXkView(\''+t.id+'\','+x.no+')" title="'+(x.up?('自主上传 · 传'+x.no+'（单击选中，双击看大图）'):('第 '+x.no+' 套 · '+x.t+'s 截帧（单击选中，双击看大图）'))+'"><img src="'+(x.thumb||'')+'" alt=""><b>'+(x.up?('传'+x.no):x.no)+'</b></span>'; });
   h+='<span class="xkmini xkup" onclick="sjXkUp(\''+t.id+'\')" title="上传自定义图，自动裁 4:3 存为小卡（传11~传16）"><b>+</b></span>';
   h+='</div>';
   h+='<input type="file" accept="image/*" id="xkfile_'+t.id+'" style="display:none" onchange="sjXkFile(\''+t.id+'\',this)">';
-  h+='<div class="xkfrow" style="margin-top:6px"><span class="xkflab">已选 #'+sel+'</span><input id="xkcap_'+t.id+'" class="xkcapin" maxlength="30" value="'+sjEsc(cur.cap||'')+'" placeholder="文案可自行改写，不超过 30 字"></div>';
+  h+='<div class="xkfrow" style="margin-top:6px"><span class="xkflab">已选 #'+sel+'</span><input id="xkcap_'+t.id+'" class="xkcapin" maxlength="30" value="'+sjEsc(cur.cap||'')+'" placeholder="该套小卡文案，可改写，不超过 30 字"></div>';
   h+='<div class="xkfrow"><button class="xkbtn" onclick="sjXkView(\''+t.id+'\','+sel+')">看大图</button><button class="xkbtn" onclick="sjXkCap(\''+t.id+'\')">存文案</button><button class="xkbtn xkgo" onclick="sjXkSwap(\''+t.id+'\')">用这张小卡换封标重投</button></div>';
-  h+='<div class="xkhint">收起时不占地方。上传图自动居中裁 4:3（约 720px），编入传11~传16 卡位，与生成小卡同样可存文案/换封标（重投仍二次确认）；点已有上传卡内的「重传」可覆盖。</div>';
+  h+='<div class="xkhint">点一下小图=选中并带出该套文案（绿框），再点另一张随时换；面板只在再点标题时收起，不会被刷新冲掉。上传图自动居中裁 4:3，编入传11~传16；换封标重投一律二次确认。</div>';
   h+='</details>';
   return h;
   }catch(e){ return ''; } }
-  window.sjXkFold=function(id,open){ if(open) window.__xkPasteTo=id; else if(window.__xkPasteTo===id) window.__xkPasteTo=''; };
+  window.sjXkFold=function(id,open){ if(open){ window.__xkOpen[id]=1; window.__xkPasteTo=id; } else { delete window.__xkOpen[id]; if(window.__xkPasteTo===id) window.__xkPasteTo=''; } };
   window.sjXkUp=function(id){ window.__xkPasteTo=id; var f=document.getElementById('xkfile_'+id); if(f){ f.removeAttribute('data-no'); f.click(); } };
   window.sjXkUpRep=function(id,no,ev){ if(ev)ev.stopPropagation(); var f=document.getElementById('xkfile_'+id); if(f){ f.setAttribute('data-no',no); f.click(); } };
   window.sjXkFile=function(id,inp){ var fl=inp&&inp.files&&inp.files[0]; var no=inp?(parseInt(inp.getAttribute('data-no'),10)||0):0; if(inp)inp.value=''; if(fl) sjXkRecv(id,fl,no); };
@@ -514,18 +515,17 @@ setInterval(reloadData,60000);
   window.sjXkView=function(id,no){
   var box=window.__xk&&window.__xk[id]; if(!box) return; var set=null; box.sets.forEach(function(x){ if(x.no===no) set=x; }); if(!set) return;
   var old=document.getElementById('xklb'); if(old) old.remove();
-  var inl=document.getElementById('xkcap_'+id);
   var mk=document.createElement('div'); mk.id='xklb';
   mk.style.cssText='display:flex;position:fixed;inset:0;background:rgba(16,24,40,.55);z-index:9998;align-items:center;justify-content:center';
   var base=(typeof TUNNEL!=='undefined'&&TUNNEL)?TUNNEL:'';
-  mk.innerHTML='<div style="background:#fff;border-radius:14px;padding:18px 20px;width:680px;max-width:94vw"><div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 10px"><b style="font-size:14px">小卡 #'+no+(set.up?'（自主上传 · <a href="javascript:void(0)" style="color:#165DFF" onclick="sjXkUpRep(\''+id+'\','+no+')">重传覆盖</a>）':' · 视频 '+set.t+' 秒截帧')+'</b><button class="xkbtn" onclick="var m=document.getElementById(\'xklb\');if(m)m.remove()">关闭</button></div><img id="xklbimg" alt="" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;border:1px solid #e4e7ec;display:block;margin:0 auto;background:#f5f6f8"/><div class="xkfrow" style="margin-top:12px"><span class="xkflab">文案</span><input id="xklbcap" class="xkcapin" maxlength="30" value="'+sjEsc(inl?inl.value:(set.cap||''))+'" placeholder="不超过 30 字"></div><div class="xkfrow" style="margin-top:2px"><button class="xkbtn xkgo" onclick="sjXkPick(\''+id+'\','+no+')">就选这张</button><button class="xkbtn" onclick="sjXkCapFrom(\''+id+'\','+no+')">存文案（不投放）</button><button class="xkbtn" style="color:#d92d20;border-color:#f4c9c5" onclick="sjXkSwapFrom(\''+id+'\','+no+')">换封标重投…</button></div><div class="xkhint">十张可逐张点开对比；「就选这张」只切换选中不回后台，重投仍二次确认。</div></div>';
+  mk.innerHTML='<div style="background:#fff;border-radius:14px;padding:18px 20px;width:680px;max-width:94vw"><div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 10px"><b style="font-size:14px">小卡 #'+no+(set.up?'（自主上传 · <a href="javascript:void(0)" style="color:#165DFF" onclick="sjXkUpRep(\''+id+'\','+no+')">重传覆盖</a>）':' · 视频 '+set.t+' 秒截帧')+'</b><button class="xkbtn" onclick="var m=document.getElementById(\'xklb\');if(m)m.remove()">关闭</button></div><img id="xklbimg" alt="" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;border:1px solid #e4e7ec;display:block;margin:0 auto;background:#f5f6f8"/><div class="xkfrow" style="margin-top:12px"><span class="xkflab">文案</span><input id="xklbcap" class="xkcapin" maxlength="30" value="'+sjEsc(set.cap||'')+'" placeholder="本套自带文案，可改写"></div><div class="xkfrow" style="margin-top:2px"><button class="xkbtn xkgo" onclick="sjXkPick(\''+id+'\','+no+')">就选这张</button><button class="xkbtn" onclick="sjXkCapFrom(\''+id+'\','+no+')">存文案（不投放）</button><button class="xkbtn" style="color:#d92d20;border-color:#f4c9c5" onclick="sjXkSwapFrom(\''+id+'\','+no+')">换封标重投…</button></div><div class="xkhint">大图预览只在双击/看大图时打开；文案框显示的就是这一套自己的文案。</div></div>';
   mk.addEventListener('click',function(ev){ if(ev.target===mk) mk.remove(); });
   document.body.appendChild(mk);
   var img=document.getElementById('xklbimg');
   img.onerror=function(){ img.onerror=null; img.src=set.thumb||''; };
   img.src=base+'/cardimg?bv='+encodeURIComponent(box.bv)+'&no='+no;
   };
-  window.sjXkPick=function(id,no){ XK_SEL[id]=no; var mk=document.getElementById('xklb'); if(mk) mk.remove(); var lb=document.getElementById('xklbcap'); var inl=document.getElementById('xkcap_'+id); if(lb&&inl) inl.value=lb.value; if(typeof renderSj==='function') renderSj(); };
+  window.sjXkPick=function(id,no,ev){ if(ev)ev.stopPropagation(); XK_SEL[id]=no; var mk=document.getElementById('xklb'); if(mk) mk.remove(); if(typeof renderSj==='function') renderSj(); };
   window.sjXkCap=function(id){ var no=XK_SEL[id]||1; var el=document.getElementById('xkcap_'+id); var cap=el?el.value.trim():''; if(!cap){ sjToast('文案不能为空',true); return; } sjDo('act=card_cap&taskId='+encodeURIComponent(id)+'&no='+no+'&cap='+encodeURIComponent(cap)).then(function(j){ sjToast(j&&j.ok?(j.msg||'已保存文案'):(j&&j.msg||'保存失败'),!(j&&j.ok)); if(j&&j.ok) fetchLive().then(function(){ renderSj(); }); }); };
   window.sjXkCapFrom=function(id,no){ var el=document.getElementById('xklbcap'); var cap=el?el.value.trim():''; if(!cap){ sjToast('文案不能为空',true); return; } sjDo('act=card_cap&taskId='+encodeURIComponent(id)+'&no='+no+'&cap='+encodeURIComponent(cap)).then(function(j){ sjToast(j&&j.ok?('已保存到小卡 #'+no+' 文案'):(j&&j.msg||'保存失败'),!(j&&j.ok)); if(j&&j.ok){ var inl=document.getElementById('xkcap_'+id); if(inl) inl.value=cap; } }); };
   function sjXkSwapCore(id,no,cap){ var box=window.__xk&&window.__xk[id]; var set=null; if(box) box.sets.forEach(function(x){ if(x.no===no) set=x; }); if(!set){ sjToast('没有第 '+no+' 号小卡',true); return; } if(!confirm('确认用小卡 #'+no+(set.up?'（自主上传图）':'')+' 换封标并重新投放？\n\n封面图：'+(set.t?('视频 '+set.t+' 秒截帧'):'自主上传的 4:3 图')+'\n封标文案：'+(cap||'(空，用原自动文案)')+'\n\n下一步会先下线该稿件全部在投资源，再按新封标开新轮（消耗项目预算）。')) return; sjDo('act=swap_cover&taskId='+encodeURIComponent(id)+'&no='+no+'&cap='+encodeURIComponent(cap)).then(function(j){ sjBanner(!!(j&&j.ok),(j&&j.msg)||(j&&j.ok?'已提交':'换封标失败')); fetchLive().then(function(){ renderSj(); }); }).catch(function(e){ sjToast('执行通道失败：'+String(e.message||e).slice(0,60),true); }); }
