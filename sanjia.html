@@ -522,8 +522,22 @@ setInterval(reloadData,60000);
   mk.addEventListener('click',function(ev){ if(ev.target===mk) mk.remove(); });
   document.body.appendChild(mk);
   var img=document.getElementById('xklbimg');
-  img.onerror=function(){ img.onerror=null; img.src=set.thumb||''; };
-  img.src=base+'/cardimg?bv='+encodeURIComponent(box.bv)+'&no='+no;
+  // 秒出优化：先画已内联的 base64 缩略图（零网络），高清原图经隧道后台取回后无缝替换；blob 缓存同图再开瞬时
+  img.src=set.thumb||'';
+  var key=box.bv+':'+no+':'+((set.t!=null)?('t'+set.t):'u')+':'+((set.thumb||'').length);
+  window.__xkBig=window.__xkBig||{};
+  if(window.__xkBig[key]){ img.src=window.__xkBig[key]; }
+  else {
+  img.setAttribute('data-k',key);
+  fetch(base+'/cardimg?bv='+encodeURIComponent(box.bv)+'&no='+no).then(function(r){ return r.ok?r.blob():null; }).then(function(b){
+  if(!b) return;
+  var ks=Object.keys(window.__xkBig);
+  if(ks.length>=30){ try{ URL.revokeObjectURL(window.__xkBig[ks[0]]); }catch(eR){} delete window.__xkBig[ks[0]]; }
+  var burl=URL.createObjectURL(b); window.__xkBig[key]=burl;
+  var cur=document.getElementById('xklbimg');
+  if(cur===img && cur.getAttribute('data-k')===key) cur.src=burl;
+  }).catch(function(){});
+  }
   };
   window.sjXkPick=function(id,no,ev){ if(ev)ev.stopPropagation(); XK_SEL[id]=no; var mk=document.getElementById('xklb'); if(mk) mk.remove(); if(typeof renderSj==='function') renderSj(); };
   window.sjXkCap=function(id){ var no=XK_SEL[id]||1; var el=document.getElementById('xkcap_'+id); var cap=el?el.value.trim():''; if(!cap){ sjToast('文案不能为空',true); return; } sjDo('act=card_cap&taskId='+encodeURIComponent(id)+'&no='+no+'&cap='+encodeURIComponent(cap)).then(function(j){ sjToast(j&&j.ok?(j.msg||'已保存文案'):(j&&j.msg||'保存失败'),!(j&&j.ok)); if(j&&j.ok) fetchLive().then(function(){ renderSj(); }); }); };
