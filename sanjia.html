@@ -174,7 +174,7 @@ function sjDur(t){
   }
   return '<div class="sj">'
     +'<div class="sj-top"><a class="sj-bv" href="https://www.bilibili.com/video/'+bv+'" target="_blank">'+bv+'</a>'
-    +'<span class="tag2 run">投放中</span>'+(t.zero?'<span class="tag2" style="background:#fef4e6;color:#b54708">涉0</span>':'')+dupTag+'<span style="font-size:11px;color:#667085;background:#f5f6f8;padding:2px 7px;border-radius:6px;white-space:nowrap">'+sjDur(t)+'</span></div>'
+    +(t.extWait?'<span class="tag2" style="background:#fef4e6;color:#b54708">等待投放</span>':'<span class="tag2 run">投放中</span>')+(t.zero?'<span class="tag2" style="background:#fef4e6;color:#b54708">涉0</span>':'')+dupTag+'<span style="font-size:11px;color:#667085;background:#f5f6f8;padding:2px 7px;border-radius:6px;white-space:nowrap">'+sjDur(t)+'</span></div>'
     +'<a class="sj-title" href="https://www.bilibili.com/video/'+bv+'" target="_blank" style="text-decoration:none">'+String(t.title||'')+'</a>'
     +'<div class="mini">'
     +'<span class="m"><small>当前播放</small><b>'+sjWan(v)+'<i> / 5w</i></b></span>'
@@ -222,7 +222,7 @@ function sjDur(t){
   box.innerHTML=h;
 }
 // ===== 实时通道：优先走隧道拿实时数据；拿不到自动回退静态快照 =====
-  var SJ_DEFAULT_TUNNEL='https://decisions-volvo-permalink-mozilla.trycloudflare.com';   // 服务端 tunnel-watch.js 每次换址会自动更新仓库里的 tunnel.json
+  var SJ_DEFAULT_TUNNEL='https://danny-families-event-seating.trycloudflare.com';   // 服务端 tunnel-watch.js 每次换址会自动更新仓库里的 tunnel.json
 function sjLS(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}catch(e){}}
 var TUNNEL='';
 var LIVE=null, LIVE_OK=false, LIVE_AT=0, LIVE_TRIED='';
@@ -419,7 +419,7 @@ setInterval(reloadData,60000);
 <div id="mask2" style="display:none;position:fixed;inset:0;background:rgba(16,24,40,.45);z-index:999;align-items:center;justify-content:center">
  <div style="background:#fff;border-radius:14px;padding:22px 24px;width:430px;max-width:92vw">
   <h3 style="margin:0 0 4px;font-size:16px">登记三家稿件</h3>
-  <p style="margin:0 0 14px;font-size:12px;color:#98a2b3">登记即刻启动：24h 内目标 5w 播放，预算 40w 封顶，三次换项目自动调度</p>
+  <p style="margin:0 0 14px;font-size:12px;color:#98a2b3">登记即刻启动：24h 内目标 5w 播放（按稿件发布时间起算），预算 40w 封顶 · 登记时自动回查后台：同事手动投放过的轮次与消耗并入账本，外部资源仍在生效时先标等待投放 · 三次换项目自动调度</p>
 
   <div class="fm"><label>BV 号 / av 号</label><input id="s_bv" placeholder="BV1xx411c7mD 或 av 号纯数字"></div>
   <div class="fm"><label>是否涉0（选填）</label><select id="s_zero" style="width:100%;padding:8px 10px;border:1px solid #d0d5dd;border-radius:8px;font-size:13px;background:#fff;color:#101828"><option value="">未选择（按普通投放规则）</option><option value="0">否</option><option value="1">涉0（只投强保量天马+勾选涉零）</option></select></div>
@@ -586,8 +586,8 @@ setInterval(reloadData,60000);
     var hits=(D.sanjia||[]).filter(function(t){ return (t.bvid||'').toUpperCase().indexOf(q)>=0; });
     if(!hits.length){ liveLookup(bv,box,raw); return; }
     box.innerHTML=hits.map(function(t){
-      var st=t.status==='running'?'投放中':(t.status==='done'?'已达标下线':'已停/收尾');
-      var r=(t.rounds||[]).length?('已投 '+t.rounds.length+' 轮 · 最近项目 '+t.rounds[t.rounds.length-1].project):'未投';
+      var st=t.status==='running'?(t.extWait?'等待投放':'投放中'):(t.status==='done'?'已达标下线':'已停/收尾');
+      var r=(t.rounds||[]).length?('已投 '+t.rounds.length+' 轮'+(t.extRounds?'（含外部 '+t.extRounds+' 轮 · 已耗 '+(Math.round((t.extBudget||0)/1000)/10)+'w）':'')+' · 最近项目 '+t.rounds[t.rounds.length-1].project):'未投';
       return sjBox('<div style="font-weight:600">'+t.bvid+' <span style="color:'+(t.status==='running'?'#0a7f46':'#667085')+'">'+st+'</span></div>'
         +'<div style="color:#667085">'+(t.title||'')+'</div>'
         +'<div style="color:#98a2b3">'+r+' · 播放 '+sjWan(t.v)+' · 消耗天马 '+sjWan(t.tianmaSpent)+' · 提交人 '+(t.requester||'未填')+'</div>');
