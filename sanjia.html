@@ -163,6 +163,7 @@ function sjPlanStrip(t){
 }
 function sjDur(t){
   var st=+new Date(t.registeredAt||t.startAt||t.createdAt);
+  if(t.pubdate&&t.status==='running') st=t.pubdate*1000;
   if(!st||isNaN(st)) return '';
   var en=(t.status!=='running')?(t.doneAt||t.closedAt||t.stoppedAt||(t.samples&&t.samples.length?t.samples[t.samples.length-1].t:Date.now())):Date.now();
   var h=(en-st)/3600000;
