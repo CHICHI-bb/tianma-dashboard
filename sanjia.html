@@ -299,7 +299,7 @@ function renderSanjia(D){
   dead.sort(function(a,b){return (b.doneAt||0)-(a.doneAt||0);});
   var okCount=dead.filter(function(t){return t.status==='done';}).length;
   var sjTime=LIVE_OK?('实时 '+new Date(LIVE_AT).toLocaleTimeString('zh-CN')):(window.TIANMA_SANJIA&&window.TIANMA_SANJIA.publishedAt?new Date(window.TIANMA_SANJIA.publishedAt).toLocaleString('zh-CN').slice(5,17):'快照');
-  var h=head.replace('<small id="sj_sum"></small>','<small>在跑 <b>'+live.length+'</b> 篇 · 24h 过关 <b>'+okCount+'</b> 篇 · 单篇 40w 封顶 · 数据 '+sjTime+'</small>');
+  var h=head.replace('<small id="sj_sum"></small>','<small>在跑 <b>'+live.length+'</b> 篇 · 24h 过关 <b>'+okCount+'</b> 篇 · 单篇 40w 封顶 · 卡片状态每 60 秒盯后台 · 数据 '+sjTime+'</small>');
   if(alerts.length){ h+='<div class="sj-alert">'+alerts.map(function(a){return '<div>⚠ '+a.bvid+' · '+a.text+'</div>';}).join('')+'</div>'; }
   if(live.length){
     var _ml={}; live.forEach(function(t){ _ml[t.bvid]=1; });
