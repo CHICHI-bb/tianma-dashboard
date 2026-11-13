@@ -255,7 +255,7 @@ function sjDur(t){
     +'<span class="m"><small>当前播放</small><b>'+sjWan(v)+'<i> / 5w</i></b></span>'
     +'<span class="m"><small>消耗天马</small><b>'+sjWan(spent)+'</b></span>'
     +'</div>'
-    +'<div class="acts2"><a class="lk" href="'+bgl+'" target="_blank">后台记录 →</a>'
+    +(t.extMaterial&&!t.materialId?'<div class="sj-note" style="margin-top:6px">后台最近一次投放用自定义物料 <b>'+sjEsc(String(t.extMaterial.id))+'</b>'+(t.extMaterial.title?(' · '+sjEsc(String(t.extMaterial.title))):'')+(t.extMaterial.creator?(' · '+sjEsc(String(t.extMaterial.creator))):'')+' · 下一轮沿用</div>':'')+'<div class="acts2"><a class="lk" href="'+bgl+'" target="_blank">后台记录 →</a>'
     +'<button onclick="sjAddDup(\''+t.bvid+'\')">添加同质</button><button onclick="sjStop(\''+t.id+'\')">不投了</button></div>'+sjXkHtml(t)
     +'</div>';
 }function renderSanjia(D){
