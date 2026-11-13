@@ -89,6 +89,9 @@ td{padding:7px 6px;border-bottom:1px solid #f5f6f8}
 .mini .lk{margin-left:auto;font-size:12.5px;color:#165DFF;text-decoration:none;border:1px solid #d1e0ff;background:#f5f8ff;border-radius:8px;padding:7px 13px}
 /* ===== 卡片网格（4 列紧凑方块）===== */
 .sj-list{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.sj-dupwrap{grid-column:1/-1;margin:-2px 0 0 2px;padding:8px 12px 12px;border-left:3px solid #c7d7fe;background:linear-gradient(90deg,#f3f8ff,#fbfcfe 55%);border-radius:0 12px 12px 0}
+.sj-duplab{font-size:11.5px;color:#475467;font-weight:700;margin:0 0 8px}
+.sj-dupwrap .sj{border-color:#dbe6fd}
 @media(max-width:1280px){.sj-list{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:980px){.sj-list{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:640px){.sj-list{grid-template-columns:1fr}}
@@ -258,7 +261,8 @@ function sjDur(t){
     +(t.extMaterial&&!t.materialId?'<div class="sj-note" style="margin-top:6px">后台最近一次投放用自定义物料 <b>'+sjEsc(String(t.extMaterial.id))+'</b>'+(t.extMaterial.title?(' · '+sjEsc(String(t.extMaterial.title))):'')+(t.extMaterial.creator?(' · '+sjEsc(String(t.extMaterial.creator))):'')+' · 下一轮沿用</div>':'')+'<div class="acts2"><a class="lk" href="'+bgl+'" target="_blank">后台记录 →</a>'
     +'<button onclick="sjAddDup(\''+t.bvid+'\')">添加同质</button><button onclick="sjStop(\''+t.id+'\')">不投了</button></div>'+sjXkHtml(t)
     +'</div>';
-}function renderSanjia(D){
+}function sjDupWrap(ks){ if(!ks||!ks.length) return ''; return '<div class="sj-dupwrap"><div class="sj-duplab">同质副稿 · '+ks.length+' 篇（主稿领先≥1w 才开新轮 · 副稿同按 5w 推 · 每张副卡当前状态如下）</div>'+ks.map(sjCard).join('')+'</div>'; }
+function renderSanjia(D){
   var box=document.getElementById('sanjia'); if(!box) return;
   var raw0=D&&D.sanjia;var arr=Array.isArray(raw0)?raw0.slice():(raw0?Object.keys(raw0).map(function(k){return raw0[k];}):[]);
   var alerts=(D.alerts||[]).filter(function(a){return a.level==='bad'||a.level==='warn';}); if(!DEMO){ if(window.__sjAlertBase===undefined){ var nwA=(typeof LIVE!=='undefined'&&LIVE&&LIVE.now)||Date.now(); var oldA=null; try{ oldA=localStorage.getItem('sj_alert_water'); }catch(eA){} window.__sjAlertBase=(oldA===null||oldA==='')?nwA:(Number(oldA)||0); try{ localStorage.setItem('sj_alert_water',String(nwA)); }catch(eA2){} } alerts=alerts.filter(function(a){return Number(a.t)>window.__sjAlertBase;}); } alerts=alerts.slice(0,4);
@@ -279,12 +283,17 @@ function sjDur(t){
   var h=head.replace('<small id="sj_sum"></small>','<small>在跑 <b>'+live.length+'</b> 篇 · 24h 过关 <b>'+okCount+'</b> 篇 · 单篇 40w 封顶 · 数据 '+sjTime+'</small>');
   if(alerts.length){ h+='<div class="sj-alert">'+alerts.map(function(a){return '<div>⚠ '+a.bvid+' · '+a.text+'</div>';}).join('')+'</div>'; }
   if(live.length){
+    var _ml={}; live.forEach(function(t){ _ml[t.bvid]=1; });
+    var kids={}, tops=[];
+    live.forEach(function(t){ if(t.dupOf&&_ml[t.dupOf]){ (kids[t.dupOf]=kids[t.dupOf]||[]).push(t); } else tops.push(t); });
+    Object.keys(kids).forEach(function(k){ kids[k].sort(function(a,b){return (b.v||0)-(a.v||0);}); });
     var amap={};
-    live.forEach(function(t){ var a=(t.author&&String(t.author).trim())||'\u672a\u77e5up\u4e3b'; (amap[a]=amap[a]||[]).push(t); });
+    tops.forEach(function(t){ var a=(t.author&&String(t.author).trim())||'\u672a\u77e5up\u4e3b'; (amap[a]=amap[a]||[]).push(t); });
     var anames=Object.keys(amap).sort(function(a,b){ return (amap[b].length-amap[a].length)||a.localeCompare(b,'zh'); });
     anames.forEach(function(a){
       var arr=amap[a]; arr.sort(function(x,y){ return (y.v||0)-(x.v||0); });
-      h+='<div class="sj-zone" style="margin:16px 0 8px;font-size:12.5px;font-weight:700;color:#475467">'+a+' <span style="font-weight:400;color:#98a2b3">· \u5728\u8dd1 '+arr.length+'</span></div><div class="sj-list">'+arr.map(sjCard).join('')+'</div>';
+      var cnt=0; arr.forEach(function(t){ cnt+=1+(kids[t.bvid]||[]).length; });
+      h+='<div class="sj-zone" style="margin:16px 0 8px;font-size:12.5px;font-weight:700;color:#475467">'+a+' <span style="font-weight:400;color:#98a2b3">· \u5728\u8dd1 '+cnt+'</span></div><div class="sj-list">'+arr.map(function(t){ return sjCard(t)+sjDupWrap(kids[t.bvid]); }).join('')+'</div>';
     });
   }
   if(dead.length){
@@ -292,7 +301,7 @@ function sjDur(t){
       +'<h2 style="font-size:15px;color:#98a2b3;margin:0">\u5df2\u7ed3\u675f \u00b7 \u6570\u636e\u4fdd\u7559</h2>'
       +'<span style="font-size:12px;color:#98a2b3">('+dead.length+')</span>'
       +'<span class="sj-dbtn" style="font-size:11px;color:#98a2b3;border:1px solid #e4e7ec;border-radius:6px;padding:2px 8px">\u5c55\u5f00 \u25b8</span></div>'
-      +'<div class="sj-list" style="display:none">'+dead.map(sjCard).join('')+'</div>';
+      +'<div class="sj-list" style="display:none">'+(function(){ var _md={}; dead.forEach(function(t){ _md[t.bvid]=1; }); var kidsD={},topsD=[]; dead.forEach(function(t){ if(t.dupOf&&_md[t.dupOf]){ (kidsD[t.dupOf]=kidsD[t.dupOf]||[]).push(t); } else topsD.push(t); }); return topsD.map(function(t){ return sjCard(t)+sjDupWrap(kidsD[t.bvid]); }).join(''); })()+'</div>';
   }
   box.innerHTML=h;
 }
