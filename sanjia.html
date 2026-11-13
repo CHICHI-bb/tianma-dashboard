@@ -261,7 +261,7 @@ function sjDur(t){
 }function renderSanjia(D){
   var box=document.getElementById('sanjia'); if(!box) return;
   var raw0=D&&D.sanjia;var arr=Array.isArray(raw0)?raw0.slice():(raw0?Object.keys(raw0).map(function(k){return raw0[k];}):[]);
-  var alerts=(D.alerts||[]).filter(function(a){return a.level==='bad'||a.level==='warn';}).slice(0,4);
+  var alerts=(D.alerts||[]).filter(function(a){return a.level==='bad'||a.level==='warn';}); if(!DEMO){ if(window.__sjAlertBase===undefined){ var nwA=(typeof LIVE!=='undefined'&&LIVE&&LIVE.now)||Date.now(); var oldA=null; try{ oldA=localStorage.getItem('sj_alert_water'); }catch(eA){} window.__sjAlertBase=(oldA===null||oldA==='')?nwA:(Number(oldA)||0); try{ localStorage.setItem('sj_alert_water',String(nwA)); }catch(eA2){} } alerts=alerts.filter(function(a){return Number(a.t)>window.__sjAlertBase;}); } alerts=alerts.slice(0,4);
   var head='<div class="sj-head"><div class="t"><h2>三家稿件</h2><small id="sj_sum"></small></div>'
     +'<div style="display:flex;gap:8px;align-items:center">'
     +'<a href="'+SJ_EXEC+'/sanjia.html" target="_blank" style="font-size:12px;color:#165DFF;text-decoration:none;border:1px solid #d1e0ff;background:#f5f8ff;border-radius:99px;padding:5px 12px">实时看板</a>'
