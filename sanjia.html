@@ -955,7 +955,7 @@ function kbSync(force){
     else KB.onData(window.LIVE);
   } else reloadData();
 }
-function sgBtn(){return '<br><button onclick="KB.toggleDemo()" style="margin-top:12px;padding:5px 14px;border-radius:99px;border:1px solid #d0d5dd;background:#fff;color:#667085;font-size:12.5px;cursor:pointer">看演示样张</button>';}
+function sgBtn(){ var d=window.TIANMA_DEMO_KEY; if(!(d&&d.tasks&&d.tasks.length)) return ''; return '<br><button onclick="KB.toggleDemo()" style="margin-top:12px;padding:5px 14px;border-radius:99px;border:1px solid #d0d5dd;background:#fff;color:#667085;font-size:12.5px;cursor:pointer">看演示样张</button>';}
 function kbCount(n){ var c=document.getElementById('tabCntKey'); if(c) c.textContent=n?'· '+n+' 在投':''; }
 function pickKeyData(){
   if(DEMO) return window.TIANMA_DEMO_KEY||{tasks:[]};
