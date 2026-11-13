@@ -249,10 +249,10 @@ function sjDur(t){
   }
   return '<div class="sj">'
     +'<div class="sj-top"><a class="sj-bv" href="https://www.bilibili.com/video/'+bv+'" target="_blank">'+bv+'</a>'
-    +(t.extWait?'<span class="tag2" style="background:#fef4e6;color:#b54708">等待投放</span>':'<span class="tag2 run">投放中</span>')+(t.zero?'<span class="tag2" style="background:#fef4e6;color:#b54708">涉0</span>':'')+dupTag+'<span style="font-size:11px;color:#667085;background:#f5f6f8;padding:2px 7px;border-radius:6px;white-space:nowrap">'+sjDur(t)+'</span></div>'
+    +(t.extWait?'<span class="tag2" style="background:#fef4e6;color:#b54708">等待投放</span>':(t.hardCase?'<span class="tag2" style="background:#fef4e6;color:#b54708">难稿档 · 70w/4w</span>':'<span class="tag2 run">投放中</span>'))+(t.zero?'<span class="tag2" style="background:#fef4e6;color:#b54708">涉0</span>':'')+dupTag+'<span style="font-size:11px;color:#667085;background:#f5f6f8;padding:2px 7px;border-radius:6px;white-space:nowrap">'+sjDur(t)+'</span></div>'
     +'<a class="sj-title" href="https://www.bilibili.com/video/'+bv+'" target="_blank" style="text-decoration:none">'+String(t.title||'')+'</a>'
     +'<div class="mini">'
-    +'<span class="m"><small>当前播放</small><b>'+sjWan(v)+'<i> / 5w</i></b></span>'
+    +'<span class="m"><small>当前播放</small><b>'+sjWan(v)+'<i> / '+(t.hardCase?'4w':'5w')+'</i></b></span>'
     +'<span class="m"><small>消耗天马</small><b>'+sjWan(spent)+'</b></span>'
     +'</div>'
     +(t.extMaterial&&!t.materialId?'<div class="sj-note" style="margin-top:6px">后台最近一次投放用自定义物料 <b>'+sjEsc(String(t.extMaterial.id))+'</b>'+(t.extMaterial.title?(' · '+sjEsc(String(t.extMaterial.title))):'')+(t.extMaterial.creator?(' · '+sjEsc(String(t.extMaterial.creator))):'')+' · 下一轮沿用</div>':'')+'<div class="acts2"><a class="lk" href="'+bgl+'" target="_blank">后台记录 →</a>'
@@ -496,7 +496,7 @@ setInterval(reloadData,60000);
 <div id="mask2" style="display:none;position:fixed;inset:0;background:rgba(16,24,40,.45);z-index:999;align-items:center;justify-content:center">
  <div style="background:#fff;border-radius:14px;padding:22px 24px;width:430px;max-width:92vw">
   <h3 style="margin:0 0 4px;font-size:16px">登记三家稿件</h3>
-  <p style="margin:0 0 14px;font-size:12px;color:#98a2b3">登记即刻启动：24h 内目标 5w 播放（按稿件发布时间起算），预算 40w 封顶 · 登记时自动回查后台：同事手动投放过的轮次与消耗并入账本，外部资源仍在生效时先标等待投放 · 三次换项目自动调度</p>
+  <p style="margin:0 0 14px;font-size:12px;color:#98a2b3">登记即刻启动：24h 内目标 5w 播放（按稿件发布时间起算），预算 40w 封顶；投满 40w 仍不过 5w 的稿件自动升「难稿档」——封顶提到 70w、再给 12 小时、播放过 4w 即收手 · 登记时自动回查后台：同事手动投放过的轮次与消耗并入账本，外部资源仍在生效时先标等待投放 · 三次换项目自动调度</p>
 
   <div class="fm"><label>BV 号 / av 号</label><input id="s_bv" placeholder="BV1xx411c7mD 或 av 号纯数字"></div>
   <div class="fm"><label>是否涉0（选填）</label><select id="s_zero" style="width:100%;padding:8px 10px;border:1px solid #d0d5dd;border-radius:8px;font-size:13px;background:#fff;color:#101828"><option value="">未选择（按普通投放规则）</option><option value="0">否</option><option value="1">涉0（只投强保量天马+勾选涉零）</option></select></div>
@@ -728,7 +728,7 @@ setInterval(reloadData,60000);
     var hits=(D.sanjia||[]).filter(function(t){ return (t.bvid||'').toUpperCase().indexOf(q)>=0; });
     if(!hits.length){ liveLookup(bv,box,raw); return; }
     box.innerHTML=hits.map(function(t){
-      var st=t.status==='running'?(t.extWait?'等待投放':'投放中'):(t.status==='done'?'已达标下线':'已停/收尾');
+      var st=t.status==='running'?(t.extWait?'等待投放':(t.hardCase?'难稿档加投中':'投放中')):(t.status==='done'?'已达标下线':(t.status==='hardline'?'难稿收线（≥4w）':'已停/收尾'));
       var r=(t.rounds||[]).length?('已投 '+t.rounds.length+' 轮'+(t.extRounds?'（含外部 '+t.extRounds+' 轮 · 已耗 '+(Math.round((t.extBudget||0)/1000)/10)+'w）':'')+' · 最近项目 '+t.rounds[t.rounds.length-1].project):'未投';
       return sjBox('<div style="font-weight:600">'+t.bvid+' <span style="color:'+(t.status==='running'?'#0a7f46':'#667085')+'">'+st+'</span></div>'
         +'<div style="color:#667085">'+(t.title||'')+'</div>'
