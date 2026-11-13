@@ -556,9 +556,9 @@ setInterval(reloadData,60000);
   window.__xk=window.__xk||{}; window.__xk[t.id]={sets:t.cardSets,bv:t.bvid};
   if(window.__xkOpen[t.id]) window.__xkPasteTo=t.id;
   var sel=sjXkCurNo(t); var cur=null; t.cardSets.forEach(function(x){ if(x.no===sel) cur=x; }); if(!cur) cur=t.cardSets[0];
-  var lab=t.materialId?('<span style="color:#039855;font-weight:600">当前封标物料 '+sjEsc(String(t.materialId))+' · 小卡 #'+t.cardSel+'</span>'):'封标小卡';
+
   var h='<details class="xkfold"'+(window.__xkOpen[t.id]?' open':'')+' ontoggle="sjXkFold(\''+t.id+'\',this.open)">';
-  h+='<summary>'+lab+' '+t.cardSets.length+' 张 · 已选 #'+sel+'（单击选卡带文案 · 双击看大图 · Ctrl+V 传图 · 换一批只换生成的 10 张）</summary>';
+  h+='<summary>物料小卡</summary>';
   h+='<div class="xkstrip">';
   t.cardSets.forEach(function(x){ h+='<span class="xkmini'+(x.no===sel?' on':'')+(x.up?' up':'')+'" onclick="sjXkPick(\''+t.id+'\','+x.no+',event)" ondblclick="sjXkView(\''+t.id+'\','+x.no+')" title="'+(x.up?('自主上传 · 传'+x.no+'（单击选中，双击看大图）'):('第 '+x.no+' 套 · '+x.t+'s 截帧（单击选中，双击看大图）'))+'"><img src="'+(x.thumb||'')+'" alt=""><b>'+(x.up?('传'+x.no):x.no)+'</b></span>'; });
   h+='<span class="xkmini xkup" onclick="sjXkUp(\''+t.id+'\')" title="上传自定义图，自动裁 4:3 存为小卡（传11~传16）"><b>+</b></span>';
