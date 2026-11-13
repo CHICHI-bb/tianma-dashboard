@@ -937,7 +937,7 @@ function render(){
     card.querySelector('.c3').appendChild(drawSprint(t));
   });
   kbCount(tasks.filter(function(t){return t.status==='running';}).length);
-  if(!tasks.length){ var ls=document.getElementById('kList'); if(ls) ls.innerHTML='<div class="empty" style="padding:40px;text-align:center">暂无重点稿件任务 · 点上方『＋ 新建任务』登记</div>'; return; }
+  if(!tasks.length){ var ls=document.getElementById('kList'); if(ls) ls.innerHTML='<div class="empty" style="padding:32px;text-align:center">暂无重点稿件任务 · 点上方『＋ 新建任务』登记'+sgBtn()+'</div>'; return; }
   document.getElementById('kFoot').textContent='数据由本机采集端发布 · 最近更新 '+(D.publishedAt?new Date(D.publishedAt).toLocaleString('zh-CN'):'—');
 }
 var DEMO=false, AUTO_DEMO=false, KB_LIVE=null;
@@ -955,6 +955,7 @@ function kbSync(force){
     else KB.onData(window.LIVE);
   } else reloadData();
 }
+function sgBtn(){return '<br><button onclick="KB.toggleDemo()" style="margin-top:12px;padding:5px 14px;border-radius:99px;border:1px solid #d0d5dd;background:#fff;color:#667085;font-size:12.5px;cursor:pointer">看演示样张</button>';}
 function kbCount(n){ var c=document.getElementById('tabCntKey'); if(c) c.textContent=n?'· '+n+' 在投':''; }
 function pickKeyData(){
   if(DEMO) return window.TIANMA_DEMO_KEY||{tasks:[]};
@@ -972,8 +973,6 @@ function paintDemoBar(){
    +'<button onclick="KB.toggleDemo()" style="margin-left:12px;border:1px solid #f5d78e;background:#fff;color:#b54708;border-radius:6px;padding:2px 10px;font-size:12px;cursor:pointer">切回真实数据</button>';
 }
 function boot(){
-  var real=window.TIANMA_BOARD;
-  if(!(real&&real.tasks&&real.tasks.length)){ DEMO=true; AUTO_DEMO=true; }
   paintDemoBar(); render();
 }
 /* kDemoBar 已改为 pane 内静态节点 */
