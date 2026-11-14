@@ -675,7 +675,7 @@ setInterval(reloadData,60000);
     var mk=document.createElement('div'); mk.id='maskDup'; mk.style.cssText='display:none;position:fixed;inset:0;background:rgba(16,24,40,.45);z-index:999;align-items:center;justify-content:center';
     var box=document.createElement('div'); box.style.cssText='background:#fff;border-radius:14px;padding:22px 24px;width:430px;max-width:92vw';
     box.innerHTML='<h3 style="margin:0 0 4px;font-size:16px">添加同质稿件</h3>'
-      +'<p style="margin:0 0 14px;font-size:12px;color:#98a2b3;line-height:1.7">主稿件与同质稿件做 48h 领先监控：gap（主 − 同质）达安全差距（主领先 ≥3w）方可投放资源；不足 3w 或未测定时同质不开新轮、主稿件自动加开加推；双方预算上限提至 70w。这一组优先保主稿件：同质同样按 5w 目标推进，但为保 gap 在 48h 内推不过 5w 不算失败；未登记的同质稿件会自动登记进本系统（默认暂不投放，主领先≥3w 后自动开投）；到期后恢复正常下线规则。</p>'
+      +'<p style="margin:0 0 14px;font-size:12px;color:#98a2b3;line-height:1.7">主稿件与同质稿件做 48h 领先监控：gap（主 − 同质）达安全差距（主领先 ≥3w）方可投放资源；不足 3w 或未测定时同质不开新轮、主稿件自动加开加推；双方预算上限提至 70w。这一组优先保主稿件：同质同样按 5w 目标推进，但为保 gap 在 48h 内推不过 5w 不算失败；未登记的同质稿件会自动登记进本系统（默认暂不投放，主领先≥3w 后自动开投）；下线规则（11-14 拍板）：副稿过 5w → 主副一起下线；副稿 24h 未过 5w 且主稿已过 5w → 主副一起下线；其余情况一律不下线（主稿过 5w 也继续投到副稿出结果）。</p>'
       +'<div class="fm"><label>同质稿件 BV 号（未登记的会自动登记，按安全差距开投）</label><input id="dup_bv" placeholder="BV1xx411c7mD"></div>'
       +'<div id="dup_msg" style="font-size:12px;color:#d92d20;min-height:18px"></div>'
       +'<div style="display:flex;gap:8px;margin-top:12px"><button id="dup_cancel" style="flex:1;padding:9px;border-radius:8px;border:1px solid #d0d5dd;background:#fff;font-size:13px;cursor:pointer">取消</button><button id="dup_go" style="flex:1;padding:9px;border-radius:8px;border:0;background:#165DFF;color:#fff;font-size:13px;font-weight:600;cursor:pointer">建立关联</button></div>';
