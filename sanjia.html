@@ -308,7 +308,15 @@ function renderSanjia(D){
     Object.keys(kids).forEach(function(k){ kids[k].sort(function(a,b){return (b.v||0)-(a.v||0);}); });
     var amap={};
     tops.forEach(function(t){ var a=(t.author&&String(t.author).trim())||'\u672a\u77e5up\u4e3b'; (amap[a]=amap[a]||[]).push(t); });
-    var anames=Object.keys(amap).sort(function(a,b){ return (amap[b].length-amap[a].length)||a.localeCompare(b,'zh'); });
+    // 11-14 用户拍板：三大板块固定顺序——央视新闻 → 新华社 → 人民日报，不再按稿件数排序（之前数量一变顺序就跳）
+    var SJ_ZONE_ORDER=['央视新闻','新华社','人民日报'];
+    var anames=Object.keys(amap).sort(function(a,b){
+      var ia=SJ_ZONE_ORDER.indexOf(a), ib=SJ_ZONE_ORDER.indexOf(b);
+      if(ia>=0&&ib>=0) return ia-ib;
+      if(ia>=0) return -1;
+      if(ib>=0) return 1;
+      return (amap[b].length-amap[a].length)||a.localeCompare(b,'zh');
+    });
     anames.forEach(function(a){
       var arr=amap[a]; arr.sort(function(x,y){ return (y.v||0)-(x.v||0); });
       var cnt=0; arr.forEach(function(t){ cnt+=1+(kids[t.bvid]||[]).length; });
