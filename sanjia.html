@@ -171,7 +171,7 @@ td{padding:7px 6px;border-bottom:1px solid #f5f6f8}
 </div>
 <section id="paneSanjia">
   <h1>三家稿件 · 自动投放</h1>
-  <p class="lead">24h 内过 5w · 单篇 40w 封顶 · 首选 AI 天马，强保量只在推不过时保底。播放每 15 分钟、后台消耗每小时更新。</p>
+  <p class="lead">24h 内过 5w · 单篇 40w 封顶 · 首选 AI 天马，强保量只在推不过时保底。播放数据约每5分钟采集；卡片状态约每60秒查询；消耗按后台回读更新。</p>
   <div style="margin:0 0 14px;display:flex;gap:8px;align-items:center"><input id="sj_search" placeholder="搜 BV / av 号查投放状态" onkeydown="if(event.key==='Enter')sjSearch()" style="flex:1;max-width:300px;padding:8px 12px;border:1px solid #d0d5dd;border-radius:8px;font-size:13px"><button onclick="sjSearch()" style="padding:8px 14px;border:1px solid #165DFF;background:#165DFF;color:#fff;border-radius:8px;font-size:13px;cursor:pointer">搜索</button></div><div id="sj_result"></div><div id="sanjia"></div>
   <div class="foot" id="foot"></div>
 </section>
@@ -279,7 +279,7 @@ function sjDur(t){
     +(t.extMaterial&&!t.materialId?'<div class="sj-note" style="margin-top:6px">后台最近一次投放用自定义物料 <b>'+sjEsc(String(t.extMaterial.id))+'</b>'+(t.extMaterial.title?(' · '+sjEsc(String(t.extMaterial.title))):'')+(t.extMaterial.creator?(' · '+sjEsc(String(t.extMaterial.creator))):'')+' · 下一轮沿用</div>':'')+'<div class="acts2"><a class="lk" href="'+bgl+'" target="_blank">后台记录 →</a>'
     +'<button onclick="sjAddDup(\''+t.bvid+'\')">添加同质</button><button onclick="sjStop(\''+t.id+'\')">不投了</button></div>'+(t.dupOf?'':sjXkHtml(t))+sjWatchHtml(t)+(kid||'')
     +'</div>';
-}function sjWatchHtml(t){ try{ if(t.dupOf) return ''; var rows=(t.cards||[]); var costAt=t.costAt||null; if(!rows.length){ return t.costError?('<div class="sj-watch"><div class="werr">后台卡片状态读取失败：'+sjEsc(String(t.costError).slice(0,60))+'（9222 Edge 的 manager 登录态可能过期，续投自愈会因此全部停摆）</div></div>'):''; } var own={}; (t.rounds||[]).forEach(function(rr){ if(!rr.external){ if(rr.uuid)own[String(rr.uuid)]=1; (rr.uuids||[]).forEach(function(u){own[String(u)]=1;}); } }); var ST={2:['投放中','#039855'],6:['待审核','#165DF3'],3:['投放暂停','#dc6803'],5:['已失效','#d92d20'],4:['已结束','#98a2b3'],7:['已结束','#98a2b3']}; var deadN=0,liveN=0; var list=rows.map(function(c){ var st=Number(c.state); var mm=own[String(c.uuid)]; var txt=ST[st]?ST[st][0]:('state='+st); var col=ST[st]?ST[st][1]:'#98a2b3'; if(st===2||st===6)liveN++; if(mm&&st!==2&&st!==6){deadN++;} var isEnd=c.end?(Date.parse(String(c.end).replace(' ','T')+'+08:08')||0):0; return {c:c,st:st,mm:mm,txt:txt,col:col,dead:(mm&&st!==2&&st!==6),ord:(st===2?0:(st===6?1:(st===3?2:3)))}; }).sort(function(a,b){ return a.ord-b.ord || String(b.c.start).localeCompare(String(a.c.start)); }); var htm='<details class="sj-watch"><summary>后台卡片监控 · '+rows.length+' 张（生效 '+liveN+'）'+(deadN?('<span style="color:#d92d20"> · 我方已死 '+deadN+' 张等待续投</span>'):'')+'<span class="wu" style="margin-left:6px">读取 '+(costAt?new Date(costAt).toLocaleTimeString('zh-CN'):'—')+'</span></summary>'; list.forEach(function(x){ htm+='<div class="wrow'+(x.dead?' dead':(x.mm?'':' ext'))+'"><span class="wst" style="background:'+x.col+'">'+x.txt+'</span><span class="wu">'+String(x.c.uuid).slice(0,8)+'</span>'+(x.mm?'<span style="color:#165DFF;font-weight:700">我方</span>':'<span style="color:#98a2b3">'+sjEsc(String(x.c.creator||'同事'))+'</span>')+'<span>'+sjWan(x.c.spent||0)+'/'+sjWan(x.c.budget||0)+'</span><span class="wu">项目'+(x.c.plan||'—')+'</span><span class="wu">'+sjEsc(String(x.c.start||'').slice(5,16))+'→'+sjEsc(String(x.c.end||'').slice(5,16))+'</span>'+(x.c.material&&x.c.material.id?('<span class="wu">物料'+sjEsc(String(x.c.material.id))+'</span>'):'')+'</div>'; }); if(t.costError) htm+='<div class="werr">最近一次读取有失败记录：'+sjEsc(String(t.costError).slice(0,60))+'</div>'; htm+='</details>'; return htm; }catch(e){ return ''; } }
+}function sjWatchHtml(t){ try{ if(t.dupOf) return ''; var rows=(t.cards||[]); var costAt=t.costAt||null; if(!rows.length){ return t.costError?('<div class="sj-watch"><div class="werr">后台卡片状态读取失败：'+sjEsc(String(t.costError).slice(0,60))+'（9222 Edge 的 manager 登录态可能过期，续投自愈会因此全部停摆）</div></div>'):''; } var own={}; (t.rounds||[]).forEach(function(rr){ if(!rr.external){ if(rr.uuid)own[String(rr.uuid)]=1; (rr.uuids||[]).forEach(function(u){own[String(u)]=1;}); } }); var ST={2:['待生效','#667085'],4:['投放中','#039855'],6:['待审核','#165DF3'],3:['投放暂停','#dc6801'],5:['已失效','#d92c20'],7:['已结束','#98a2b3']}; var deadN=0,liveN=0; var list=rows.map(function(c){ var st=Number(c.state); var mm=own[String(c.uuid)]; var txt=ST[st]?ST[st][0]:('state='+st); var col=ST[st]?ST[st][1]:'#98a2b3'; if(st===2||st===4||st===6)liveN++; if(mm&&(st===5||st===7)){deadN++;} var isEnd=c.end?(Date.parse(String(c.end).replace(' ','T')+'+08:08')||0):0; return {c:c,st:st,mm:mm,txt:txt,col:col,dead:(mm&&(st===5||st===7)),ord:(st===4?0:(st===2?1:(st===6?2:(st===3?3:4))))}; }).sort(function(a,b){ return a.ord-b.ord || String(b.c.start).localeCompare(String(a.c.start)); }); var htm='<details class="sj-watch"><summary>后台卡片监控 · '+rows.length+' 张（生效 '+liveN+'）'+(deadN?('<span style="color:#d92d20"> · 我方已死 '+deadN+' 张等待续投</span>'):'')+'<span class="wu" style="margin-left:6px">读取 '+(costAt?new Date(costAt).toLocaleTimeString('zh-CN'):'—')+'</span></summary>'; list.forEach(function(x){ htm+='<div class="wrow'+(x.dead?' dead':(x.mm?'':' ext'))+'"><span class="wst" style="background:'+x.col+'">'+x.txt+'</span><span class="wu">'+String(x.c.uuid).slice(0,8)+'</span>'+(x.mm?'<span style="color:#165DFF;font-weight:700">我方</span>':'<span style="color:#98a2b3">'+sjEsc(String(x.c.creator||'同事'))+'</span>')+'<span>'+sjWan(x.c.spent||0)+'/'+sjWan(x.c.budget||0)+'</span><span class="wu">项目'+(x.c.plan||'—')+'</span><span class="wu">'+sjEsc(String(x.c.start||'').slice(5,16))+'→'+sjEsc(String(x.c.end||'').slice(5,16))+'</span>'+(x.c.material&&x.c.material.id?('<span class="wu">物料'+sjEsc(String(x.c.material.id))+'</span>'):'')+'</div>'; }); if(t.costError) htm+='<div class="werr">最近一次读取有失败记录：'+sjEsc(String(t.costError).slice(0,60))+'</div>'; htm+='</details>'; return htm; }catch(e){ return ''; } }
 function sjDupWrap(ks){ if(!ks||!ks.length) return ''; var h='<div class="sj-dupmini"><div class="dm-lab">同质副稿 · '+ks.length+' 篇（副稿不出小卡 · 主稿领先≥3w 才开新轮）</div>'; ks.forEach(function(d){ var st=d.extWait?'等待投放':(d.status==='running'?'投放中':'已结束'); var gap=d.gapNow==null?'?':((d.gapNow>=0?'+':'')+(Math.round(d.gapNow/1000)/10)+'w'); h+='<div class="dm"><a href="https://www.bilibili.com/video/'+d.bvid+'" target="_blank">'+d.bvid+'</a><span class="tag2" style="background:'+(d.status==='running'?'#ecfdf3;color:#039855':'#f2f4f7;color:#475467')+'">'+st+'</span><span class="tag2" style="background:#eef4ff;color:#165DFF">同质 '+gap+'</span><span>播放 <b class="dmv">'+sjWan(d.v||0)+'</b><span class="dmn">/5w</span></span><span>耗天马 <b class="dmv">'+sjWan(d.tianmaSpent||0)+'</b></span>'+(sjDur(d)?('<span class="dmn">'+sjDur(d)+'</span>'):'')+'<button class="dmx" onclick="sjStop(\''+d.id+'\')">不投了</button></div>'; }); return h+'</div>'; }
 function renderSanjia(D){
   var box=document.getElementById('sanjia'); if(!box) return;
@@ -532,7 +532,7 @@ setInterval(reloadData,60000);
 <div id="mask2" style="display:none;position:fixed;inset:0;background:rgba(16,24,40,.45);z-index:999;align-items:center;justify-content:center">
  <div style="background:#fff;border-radius:14px;padding:22px 24px;width:430px;max-width:92vw">
   <h3 style="margin:0 0 4px;font-size:16px">登记三家稿件</h3>
-  <p style="margin:0 0 14px;font-size:12px;color:#98a2b3">登记即刻启动：24h 内目标 5w 播放（按稿件发布时间起算），预算 40w 封顶；投满 40w 仍不过 5w 的稿件自动升「难稿档」——封顶提到 70w、再给 12 小时、播放过 4w 即收手 · 登记时自动回查后台：同事手动投放过的轮次与消耗并入账本，外部资源仍在生效时先标等待投放 · 三次换项目自动调度</p>
+  <p style="margin:0 0 14px;font-size:12px;color:#98a2b3">登记即刻启动：24h 内目标 5w 播放（按稿件发布时间起算），预算 40w 封顶；天马实际消耗满30w后，按播放量进入自然滚动/难稿分档——封顶提到 70w、再给 12 小时、播放过 4w 即收手 · 登记时自动回查后台：同事手动投放过的轮次与消耗并入账本，外部资源仍在生效时先标等待投放 · 三次换项目自动调度</p>
 
   <div class="fm"><label>BV 号 / av 号</label><input id="s_bv" placeholder="BV1xx411c7mD 或 av 号纯数字"></div>
   <div class="fm"><label>是否涉0（选填）</label><select id="s_zero" style="width:100%;padding:8px 10px;border:1px solid #d0d5dd;border-radius:8px;font-size:13px;background:#fff;color:#101828"><option value="">未选择（按普通投放规则）</option><option value="0">否</option><option value="1">涉0（只投强保量天马+勾选涉零）</option></select></div>
@@ -692,13 +692,14 @@ setInterval(reloadData,60000);
       else sjToast(j.msg||'停止失败',true);
     }).catch(function(e){ sjToast('执行通道不可达：'+(e&&e.message||e),true); });
   };  function sjStateText(s){
-    var m={0:'待投放',1:'待投放',2:'投放中',3:'投放暂停',4:'已结束',5:'已失效',6:'待审核',7:'已结束'};
+    var m={0:'待投放',1:'待投放',2:'待生效',3:'投放暂停',4:'投放中',5:'已失效',6:'待审核',7:'已结束'};
     return (m[s]!==undefined)?m[s]:('状态'+s);
   }
   function sjApi(path){
     var cross=(location.hostname&&location.hostname.indexOf('github.io')>=0);
     var base=cross?TUNNEL:'';
-    return fetch(base+path).then(function(r){return r.json();});
+    var ctl=new AbortController();var tm=setTimeout(function(){ctl.abort();},8000);
+    return fetch(base+path,{signal:ctl.signal,cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}).finally(function(){clearTimeout(tm);});
   }
   function sjBox(inner){ return '<div style="padding:10px 14px;border:1px solid #e4e7ec;border-radius:8px;margin-bottom:8px;font-size:12.5px">'+inner+'</div>'; }
   function sjPoolsRender(d,at){
@@ -738,7 +739,7 @@ setInterval(reloadData,60000);
     sjApi('/api/lookup?bv='+encodeURIComponent(bv)).then(function(d){
       if(!d||!d.ok){
         var why=(d&&(d.error||d.err))||'未知错误';
-        box.innerHTML='<div style="padding:10px 14px;background:#fff7f7;border:1px solid #f0c0c0;border-radius:8px;color:#d92d20;font-size:12.5px">后台查询失败：'+why+'</div>';
+        box.innerHTML='<div style="padding:10px 14px;background:#fff7f7;border:1px solid #f0c0c0;border-radius:8px;color:#d92d20;font-size:12.5px">后台查询失败：'+sjEsc(String(why).slice(0,240))+'</div>';
         return;
       }
       var html='';
@@ -746,15 +747,15 @@ setInterval(reloadData,60000);
         html+='<div style="font-size:12px;color:#667085;margin:0 0 6px">天马后台 · 已查 '+d.plans+' 个项目池</div>';
         html+=(d.cards).map(function(c){
           var on=(c.state===2);
-          return sjBox('<div style="font-weight:600">'+d.bv+' <span style="color:'+(on?'#0a7f46':'#667085')+'">'+sjStateText(c.state)+'</span></div>'
-            +'<div style="color:#98a2b3">项目池 '+c.plan+' · 预算 '+(Math.round(c.budget/1000)/10)+'w · '+(c.start||'')+' ~ '+(c.end||'')+' · 创建人 '+(c.creator||'-')+'</div>');
+          return sjBox('<div style="font-weight:600">'+sjEsc(d.bv)+' <span style="color:'+(on?'#0a7f46':'#667085')+'">'+sjEsc(sjStateText(c.state))+'</span></div>'
+            +'<div style="color:#98a2b3">项目池 '+sjEsc(c.plan)+' · 预算 '+sjEsc(Math.round((Number(c.budget)||0)/1000)/10)+'w · '+sjEsc(c.start||'')+' ~ '+sjEsc(c.end||'')+' · 创建人 '+sjEsc(c.creator||'-')+'</div>');
         }).join('');
       }
       if((d.hot||[]).length){
         html+='<div style="font-size:12px;color:#667085;margin:10px 0 6px">热搜提报</div>';
         html+=(d.hot).map(function(h){
-          return sjBox('<div style="font-weight:600">'+(h.word||'')+'</div>'
-            +'<div style="color:#98a2b3">状态 '+(h.status)+' · 提报人 '+(h.creator||'-')+'</div>');
+          return sjBox('<div style="font-weight:600">'+sjEsc(h.word||'')+'</div>'
+            +'<div style="color:#98a2b3">状态 '+sjEsc(h.status)+' · 提报人 '+sjEsc(h.creator||'-')+'</div>');
         }).join('');
       }
       if(!html){
@@ -762,7 +763,7 @@ setInterval(reloadData,60000);
       }
       box.innerHTML=html;
     }).catch(function(e){
-      box.innerHTML='<div style="padding:10px 14px;background:#fff7f7;border:1px solid #f0c0c0;border-radius:8px;color:#d92d20;font-size:12.5px">查询出错：'+(e&&e.message||e)+'</div>';
+      box.innerHTML='<div style="padding:10px 14px;background:#fff7f7;border:1px solid #f0c0c0;border-radius:8px;color:#d92d20;font-size:12.5px">查询出错：'+sjEsc(String((e&&e.message)||e).slice(0,240))+'</div>';
     });
   }
   window.sjSearch=function(){
@@ -774,12 +775,13 @@ setInterval(reloadData,60000);
     var D=window.TIANMA_SANJIA||{sanjia:[]};
     var hits=(D.sanjia||[]).filter(function(t){ return (t.bvid||'').toUpperCase().indexOf(q)>=0; });
     if(!hits.length){ liveLookup(bv,box,raw); return; }
+    function escHtml(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
     box.innerHTML=hits.map(function(t){
       var st=t.status==='running'?(t.extWait?'等待投放':(t.hardCase?'难稿档加投中':'投放中')):(t.status==='done'?'已达标下线':(t.status==='hardline'?'难稿收线（≥4w）':'已停/收尾'));
       var r=(t.rounds||[]).length?('已投 '+t.rounds.length+' 轮'+(t.extRounds?'（含外部 '+t.extRounds+' 轮 · 已耗 '+(Math.round((t.extBudget||0)/1000)/10)+'w）':'')+' · 最近项目 '+t.rounds[t.rounds.length-1].project):'未投';
-      return sjBox('<div style="font-weight:600">'+t.bvid+' <span style="color:'+(t.status==='running'?'#0a7f46':'#667085')+'">'+st+'</span></div>'
-        +'<div style="color:#667085">'+(t.title||'')+'</div>'
-        +'<div style="color:#98a2b3">'+r+' · 播放 '+sjWan(t.v)+' · 消耗天马 '+sjWan(t.tianmaSpent)+' · 提交人 '+(t.requester||'未填')+'</div>');
+      return sjBox('<div style="font-weight:600">'+escHtml(t.bvid)+' <span style="color:'+(t.status==='running'?'#0a7f46':'#667085')+'">'+escHtml(st)+'</span></div>'
+        +'<div style="color:#667085">'+escHtml(t.title||'')+'</div>'
+        +'<div style="color:#98a2b3">'+escHtml(r)+' · 播放 '+escHtml(sjWan(t.v))+' · 消耗天马 '+escHtml(sjWan(t.tianmaSpent))+' · 提交人 '+escHtml(t.requester||'未填')+'</div>');
     }).join('');
   };  window.submitSanjia=function(){
     var btn=document.getElementById('s_go');
