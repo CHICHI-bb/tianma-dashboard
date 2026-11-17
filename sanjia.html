@@ -339,7 +339,7 @@ function renderSanjia(D){
   box.innerHTML=h;
 }
 // ===== 实时通道：优先走隧道拿实时数据；拿不到自动回退静态快照 =====
-  var SJ_DEFAULT_TUNNEL='https://southampton-conversion-cardiff-theta.trycloudflare.com';   // 服务端 tunnel-watch.js 会更新发布目录 tunnel.json；部署包不写死临时隧道
+  var SJ_DEFAULT_TUNNEL='https://governmental-ground-alloy-giants.trycloudflare.com';   // 服务端 tunnel-watch.js 会更新发布目录 tunnel.json；部署包不写死临时隧道
 function sjLS(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}catch(e){}}
 var TUNNEL='';
 var LIVE=null, LIVE_OK=false, LIVE_AT=0, LIVE_TRIED='';
@@ -524,10 +524,10 @@ setInterval(reloadData,60000);
     var candidates=[];if(location.origin&&/^https?:/.test(location.origin))candidates.push('');if(typeof TUNNEL!=='undefined'&&TUNNEL)candidates.push(TUNNEL);if(window.SJ_EXEC)candidates.push(window.SJ_EXEC);
     var base=null,lastError;
     for(var i=0;i<candidates.length;i++){try{var health=await fetch(candidates[i]+'/health',{signal:AbortSignal.timeout(5000),cache:'no-store'});if(health.ok){base=candidates[i];break;}}catch(e){lastError=e;}}
-    if(base===null)throw lastError||new Error('执行端不可达，未发送操作');
+    if(base===null){var _d=(lastError&&lastError.message)?('（'+lastError.message+'）'):'';throw new Error('执行端不可达：候选地址健康检查全部失败，本次操作未发送'+_d);}
     // Send once. A lost response keeps the same request ID for a later explicit retry.
     var r=await fetch(base+'/do',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','X-Panel-Key':sjPanelKey()},body:params.toString(),signal:AbortSignal.timeout(30000)});
-    var j=await r.json();if(!r.ok)throw new Error(j.error||j.msg||('HTTP '+r.status));
+    var j=await r.json();if(!r.ok){var _m=j.error||j.msg||('HTTP '+r.status);if(r.status===401||r.status===403){if(/密钥/.test(_m))_m='缺少执行密钥或密钥不正确 —— 点页面「执行权限」填入密钥后重试';else if(/来源/.test(_m))_m='当前页面来源不在允许列表，无法执行';}throw new Error(_m);}
     delete sjPendingRequests[fingerprint];try{sessionStorage.removeItem('sj_request_'+fingerprint);}catch(e){}return j;
   }
   function go(qs){return sjDo(qs).then(function(j){sjToast(j.msg||j.error||'已处理',!j.ok);return fetchLive();});}
@@ -720,7 +720,7 @@ setInterval(reloadData,60000);
     sjDo('act=sanjia_stop&taskId='+encodeURIComponent(id)).then(function(j){
       if(j.ok){ sjToast(j.msg||'已停止，卡片下线中'); fetchLive().then(renderSj); }
       else sjToast(j.msg||'停止失败',true);
-    }).catch(function(e){ sjToast('执行通道不可达：'+(e&&e.message||e),true); });
+    }).catch(function(e){ sjToast((e&&e.message||e)||'执行失败',true); });
   };  function sjStateText(s){
     var m={0:'待投放',1:'待投放',2:'待生效',3:'投放暂停',4:'投放中',5:'已失效',6:'待审核',7:'已结束'};
     return (m[s]!==undefined)?m[s]:('状态'+s);
@@ -844,8 +844,8 @@ setInterval(reloadData,60000);
       }
     }).catch(function(e){
       if(btn){ btn.disabled=false; btn.textContent='立即登记并开投'; }
-      msg.textContent='执行通道不可达：'+(e&&e.message||e);
-      sjToast('执行通道不可达，可用地址都试过了',true);
+      msg.textContent=(e&&e.message||e)||'执行失败';
+      sjToast('执行端不可达：候选地址健康检查全部失败（隧道可能已换址，刷新页面后重试）',true);
     });
   };
 </script>
@@ -1025,7 +1025,7 @@ function kbMsg(t,bad){ if(window.sjToast){ sjToast(t,bad); } else { try{ alert((
 function kbAct(qs){
   if(DEMO){ kbMsg('演示数据不能执行操作，请先点『切回真实数据』',true); return; }
   var done=function(j){ if(j&&j.ok){ kbMsg(j.msg||'已执行',false); kbSync(); } else { kbMsg((j&&j.msg)||'执行失败',true); var m=document.getElementById('f_msg'); if(m&&qs.indexOf('act=new')===0) m.textContent=(j&&j.msg)||'登记失败'; } };
-  if(window.sjDo){ sjDo(qs).then(done).catch(function(e){ kbMsg('执行通道不可达：'+((e&&e.message)||e),true); }); }
+  if(window.sjDo){ sjDo(qs).then(done).catch(function(e){ kbMsg(((e&&e.message)||e)||'执行失败',true); }); }
   else { kbMsg('执行模块尚未加载，请刷新后重试',true); }
 }
 function kbSync(force){
