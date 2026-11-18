@@ -201,10 +201,20 @@ td{padding:7px 6px;border-bottom:1px solid #f5f6f8}
   <p style="margin:0 0 14px;font-size:12px;color:#98a2b3">提交后本机开始采集与投放，你无需再干预</p>
   <div class="fm"><label>BV 号</label><input id="f_bv" placeholder="BV1PuHP6uENX"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-    <div class="fm"><label>目标播放（万）</label><input id="f_tg" type="number" value="10"></div>
+    <div class="fm"><label>目标播放（万）</label><input id="f_tg" type="number" value="10" oninput="KB.est()"></div>
     <div class="fm"><label>达成方式</label><select id="f_md" onchange="document.getElementById('f_atbox').style.display=this.value==='at'?'block':'none'"><option value="2h">2 小时后</option><option value="at">指定时刻</option></select></div>
   </div>
   <div class="fm" id="f_atbox" style="display:none"><label>达成时刻</label><input id="f_at" type="time" value="18:00"></div>
+  <div class="fm"><label>稿件类型（影响投放量级）</label><select id="f_kind" onchange="KB.est()">
+    <option value="习语">习语</option>
+    <option value="热门双会面">热门 双 会面</option>
+    <option value="单国内" selected>单 国内</option>
+    <option value="单国际">单 国际</option>
+    <option value="非热双会面">非热 双 会面</option>
+    <option value="时政周边">时政周边</option>
+    <option value="时政微纪录">时政微纪录</option>
+  </select></div>
+  <div id="f_est" style="font-size:11.5px;color:#667085;margin:-4px 0 10px">量级预估：选完类型与时间后自动算</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
     <div class="fm"><label>起播点（时:分:秒）</label><input id="f_qd" type="time" step="1" value="00:00:15"></div>
     <div class="fm"><label>天马小卡 ID（可不填）</label><input id="f_mt" placeholder=""></div>
@@ -546,19 +556,26 @@ setInterval(reloadData,60000);
     sjPendingRequests[fingerprint]={id:id};try{sessionStorage.setItem('sj_request_'+fingerprint,JSON.stringify({id:id}));}catch(e){}params.set('clientRequestId',id);
     var candidates=[];if(location.origin&&/^https?:/.test(location.origin))candidates.push('');if(typeof TUNNEL!=='undefined'&&TUNNEL)candidates.push(TUNNEL);if(window.SJ_EXEC)candidates.push(window.SJ_EXEC);
     var base=null,lastError;
-    // 2026-11-18：免费隧道经常 5~10 秒才回，原来 5 秒超时会把"通着的执行端"判成不可达。
-    // 改成 15 秒超时 + 每个候选重试一次（间隔 1.5 秒），只有真的连不上才报错。
+    // 2026-11-18 优化：点「立即登记并开投」后长时间停在「提交中…」的首要原因是——
+    // 每次操作前都要先对候选地址挨个做 /health 预检，而候选里的免费隧道成功率只有约 1/3：
+    // 预检失败要等满 15 秒、每个候选还重试一次，3 个候选最坏 90 秒才发出真正的请求。
+    // 现在：① 记住上次成功的执行端，直接 POST 不再预检；② 回退时预检超时压到 6 秒且只试一次。
+    var sendDo=async function(b){
+      var r=await fetch(b+'/do',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','X-Panel-Key':sjPanelKey()},body:params.toString(),signal:AbortSignal.timeout(20000)});
+      var j=await r.json();
+      if(!r.ok){var _m=j.error||j.msg||('HTTP '+r.status);if(r.status===401||r.status===403){if(/密钥/.test(_m))_m='缺少执行密钥或密钥不正确 —— 点页面「执行权限」填入密钥后重试';else if(/来源/.test(_m))_m='当前页面来源不在允许列表，无法执行';}throw new Error(_m);}
+      if(!j||typeof j.ok!=='boolean')throw new Error('执行端响应异常');
+      try{localStorage.setItem('sj_good_base',b);}catch(e){}
+      return j;
+    };
+    var good='';try{good=localStorage.getItem('sj_good_base')||'';}catch(e){}
+    if(good){try{var jg=await sendDo(good);delete sjPendingRequests[fingerprint];try{sessionStorage.removeItem('sj_request_'+fingerprint);}catch(e){}return jg;}catch(eG){lastError=eG;}}
     for(var i=0;i<candidates.length;i++){
-      for(var attempt=1;attempt<=2&&base===null;attempt++){
-        try{var health=await fetch(candidates[i]+'/health',{signal:AbortSignal.timeout(15000),cache:'no-store'});if(health.ok){base=candidates[i];break;}}
-        catch(e){lastError=e;if(attempt===1)await new Promise(function(r){setTimeout(r,1500);});}
-      }
-      if(base!==null)break;
+      if(candidates[i]===good)continue;
+      try{var health=await fetch(candidates[i]+'/health',{signal:AbortSignal.timeout(6000),cache:'no-store'});if(health.ok){base=candidates[i];break;}}catch(e){lastError=e;}
     }
     if(base===null){var _d=(lastError&&lastError.message)?('（'+lastError.message+'）'):'';throw new Error('执行端不可达：候选地址健康检查全部失败，本次操作未发送'+_d);}
-    // Send once. A lost response keeps the same request ID for a later explicit retry.
-    var r=await fetch(base+'/do',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','X-Panel-Key':sjPanelKey()},body:params.toString(),signal:AbortSignal.timeout(30000)});
-    var j=await r.json();if(!r.ok){var _m=j.error||j.msg||('HTTP '+r.status);if(r.status===401||r.status===403){if(/密钥/.test(_m))_m='缺少执行密钥或密钥不正确 —— 点页面「执行权限」填入密钥后重试';else if(/来源/.test(_m))_m='当前页面来源不在允许列表，无法执行';}throw new Error(_m);}
+    var j=await sendDo(base);
     delete sjPendingRequests[fingerprint];try{sessionStorage.removeItem('sj_request_'+fingerprint);}catch(e){}return j;
   }
   function go(qs){return sjDo(qs).then(function(j){sjToast(j.msg||j.error||'已处理',!j.ok);return fetchLive();});}
@@ -1129,9 +1146,35 @@ setInterval(reloadData,60000);
   // 跳转式执行（浏览器禁止 https→http 请求，但允许顶级跳转）
   var API=(window.TIANMA_API||'');
   var BACK=(location.href.split('#')[0])+'#tab=key';
-    var openForm=function(){document.getElementById('kMask').style.display='flex';};
+    var openForm=function(){document.getElementById('kMask').style.display='flex';var e=document.getElementById('f_est');if(e)e.textContent=kpEstText();};
+
+// ===== 量级预估（与 keyplan.js 同口径）=====
+var KP_TYPES={'习语':{story:16.76,tianma:6.02,water:20},'热门双会面':{story:14.37,tianma:9.25,water:20},'单国内':{story:11.72,tianma:5.91,water:20},'单国际':{story:13.84,tianma:7.36,water:8},'非热双会面':{story:12.48,tianma:5.20,water:10},'时政周边':{story:11.92,tianma:6.98,water:15},'时政微纪录':{story:5.61,tianma:4.33,water:20}};
+var KP_MEAN={story:11.19,tianma:6.54};
+function kpWinEff(h){var x=Math.max(6,Math.min(12,h));return 6.67+(x-6)*0.8325;}
+function kpFactor(kind,ch){var d=KP_TYPES[kind]||KP_TYPES['单国内'];var r=d[ch]/KP_MEAN[ch];return r<0.85?r:1;}
+function kpMag(targetWan,h,kind,ch){var eff=kpWinEff(h)*kpFactor(kind,ch);var raw=targetWan*10000/(eff/100);var steps=Math.max(1,Math.round(Number((raw/100000).toFixed(3))));return Math.max(50000,Math.min(2000000,steps*100000));}
+function kpEstText(){
+  try{
+    var tg=Number(document.getElementById('f_tg').value)||0;
+    var kind=document.getElementById('f_kind').value;
+    var md=document.getElementById('f_md').value;
+    var h;
+    if(md==='at'){var v=document.getElementById('f_at').value||'18:00';var d=new Date();var pp=v.split(':');d.setHours(+pp[0],+pp[1],0,0);if(d.getTime()<=Date.now())d.setDate(d.getDate()+1);h=(d.getTime()-Date.now())/3600000;}
+    else h=2;
+    if(!(tg>0))return '量级预估：先填目标播放';
+    var zero=document.getElementById('f_z').value==='1';
+    var S=kpMag(tg,h,kind,'story'), T=kpMag(tg,h,kind,'tianma');
+    var hrs=h<=7?6:8;
+    var out='量级预估（窗口 '+h.toFixed(1)+'h，一次性 '+hrs+'h）：';
+    out+= zero ? '涉 0 只投天马 强保量 '+(T/10000)+'w' : 'Story 强保量 '+(S/10000)+'w + 天马 强保量 '+(T/10000)+'w';
+    var w=(KP_TYPES[kind]||{}).water||20;
+    if(tg>w) out+=' · 目标高于该类水位 '+w+'w';
+    return out;
+  }catch(e){return '量级预估：计算失败';}
+}
   var kbBusy=false;
-  var submitTask=function(){
+  var submitTask=function(){ var _e=document.getElementById('f_est'); if(_e)_e.textContent=kpEstText();
     if(kbBusy) return;                                  // 2026-11-18：防连点重复登记
     var bv=document.getElementById('f_bv').value.trim();
     var tg=Number(document.getElementById('f_tg').value);
@@ -1151,7 +1194,8 @@ setInterval(reloadData,60000);
       +'&qidian='+encodeURIComponent(document.getElementById('f_qd').value||'00:00:15')
       +'&materialId='+encodeURIComponent(document.getElementById('f_mt').value||'')
       +'&isZero='+(document.getElementById('f_z').value==='1'?'1':'0')
-      +'&remark='+encodeURIComponent(document.getElementById('f_rk').value||''),
+      +'&remark='+encodeURIComponent(document.getElementById('f_rk').value||'')
+      +'&kind='+encodeURIComponent(document.getElementById('f_kind').value||'单国内'),
       function(ok,msg){
         reset();
         if(!ok){ el.textContent=msg||'登记失败'; return; }   // 失败保留弹窗，把真实原因写在表单里
@@ -1180,6 +1224,7 @@ document.addEventListener('click',function(e){
   })();
 
 window.KB={
+  est:function(){var e=document.getElementById('f_est');if(e)e.textContent=kpEstText();},
   render:render, openForm:openForm, submitTask:submitTask,
   hideForm:function(){ var m=document.getElementById('kMask'); if(m) m.style.display='none'; },
   toggleDemo:function(){ DEMO=!DEMO; AUTO_DEMO=false; paintDemoBar(); render(); },
