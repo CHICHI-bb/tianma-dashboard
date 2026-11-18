@@ -980,6 +980,35 @@ function planOf(t){
   const per=Math.round(st/rounds*10)/10;
   return {H,tm,st,prio,cf,rounds,per,outT:tm*0.04,outS:st*cf,T,DL};
 }
+// 2026-11-18：拆解预览改为实时消耗表——读后台实际消耗，每小时一行，每回读一次刷新当前小时
+function costW(v){ return v==null?'—':((Number(v)||0)/10000).toFixed(2)+'w'; }
+function costBlockHTML(t){
+  const log=(t.costLog||[]).slice().sort(function(a,b){ return String(a.k).localeCompare(String(b.k)); });
+  let rows='';
+  if(!log.length){
+    const tm=Number(t.tianmaSpent||0), st=Number(t.storySpent||0);
+    rows='<tr><td>累计（小时数据待下一次回读）</td><td><b>'+costW(tm)+'</b></td><td><b>'+costW(st)+'</b></td><td><b>'+costW(tm+st)+'</b></td><td>'+(t.costAt?hhmm(t.costAt):'—')+'</td></tr>';
+  } else {
+    let prev=null;
+    log.forEach(function(r,i){
+      const dt=prev?Math.max(0,(Number(r.tianma)||0)-(Number(prev.tianma)||0)):(Number(r.tianma)||0);
+      const ds=prev?Math.max(0,(Number(r.story)||0)-(Number(prev.story)||0)):(Number(r.story)||0);
+      const last=(i===log.length-1);
+      rows+='<tr'+(last?' style="background:#f5f8ff"':'')+'>'
+        +'<td>'+sjEsc(r.label||r.k)+(last?' <span style="color:#165DFF;font-size:10.5px">进行中</span>':'')+'</td>'
+        +'<td><b>'+costW(dt)+'</b> <span style="color:#98a2b3">/'+costW(r.tianma)+'</span></td>'
+        +'<td><b>'+costW(ds)+'</b> <span style="color:#98a2b3">/'+costW(r.story)+'</span></td>'
+        +'<td><b>'+costW(dt+ds)+'</b></td>'
+        +'<td>'+(r.at?hhmm(r.at):'—')+(r.reads?' · '+r.reads+' 次':'')+'</td></tr>';
+      prev=r;
+    });
+  }
+  const tmT=Number(t.tianmaSpent||0), stT=Number(t.storySpent||0);
+  const bT=Number(t.tianmaBudget||0), bS=Number(t.storyBudget||0);
+  const left=Math.max(0,bT+bS-tmT-stT);
+  return '<table><thead><tr><th>小时段</th><th>天马消耗（本小时 / 累计）</th><th>Story 消耗（本小时 / 累计）</th><th>本小时合计</th><th>回读</th></tr></thead><tbody>'+rows+'</tbody></table>'
+    +'<div class="plan-foot">实耗合计 <b>'+costW(tmT+stT)+'</b>（天马 '+costW(tmT)+' / Story '+costW(stT)+'）· 预算合计 <b>'+costW(bT+bS)+'</b> · 剩余 <b>'+costW(left)+'</b>'+(t.costAt?(' · 最近回读 '+hhmm(t.costAt)):'')+'</div>';
+}
 function timeline(t){
   const items=[];
   const T=+new Date(t.startAt);
@@ -1042,7 +1071,7 @@ function render(){
       '<div class="kfold">'+
         '<div class="kfold-head" role="button" tabindex="0" aria-expanded="'+(foldOpen?'true':'false')+'">'+
           '<span class="kfold-t">长分析</span>'+
-          '<span class="kfold-s">达成曲线 · 每 5 分钟增量 · 在看冲刺 · 拆解预览 · 生效资源 · 事件时间线</span>'+
+          '<span class="kfold-s">达成曲线 · 每 5 分钟增量 · 在看冲刺 · 实时消耗（按窗口粒度） · 生效资源 · 事件时间线</span>'+
           '<span class="kfold-a">'+(foldOpen?'收起 ▴':'展开 ▾')+'</span>'+
         '</div>'+
         '<div class="kfold-body" style="display:'+(foldOpen?'block':'none')+'">'+
@@ -1051,10 +1080,7 @@ function render(){
         '<div class="chart"><div class="ct"><span>每 5 分钟增量（虚线=达标所需）</span></div><div class="c2"></div></div>'+
         '<div class="chart"><div class="ct"><span>在看冲刺（目标 1000+）</span></div><div class="c3"></div></div>'+
       '</div>'+
-      '<div class="sec"><h4>拆解预览 · 按目标与时长拆分</h4>'+
-        '<table><thead><tr><th>轮次</th><th>资源</th><th>预算</th><th>时间</th><th>优先级</th><th>预期产出</th></tr></thead><tbody>'+planRows+'</tbody></table>'+
-        '<div class="plan-foot">预期合计 <b>'+wan(tot*10000)+'w</b>（天马 '+wan(p.outT*10000)+'w + Story '+wan(p.outS*10000)+'w，Story 系数 '+(p.cf*100)+'%）'+(gap>0?' · 差 <b style="color:#d92d20">'+gap.toFixed(1)+'w</b> 依赖自然流量或后续追加':' · 已覆盖目标')+'</div>'+
-        '<div style="margin-top:8px"><div style="font-size:11px;color:#98a2b3;margin-bottom:4px">对账线（每段应到播放）</div><div class="chips">'+chips+'</div></div>'+
+      '<div class="sec"><h4>实时消耗 · 后台回读 · '+((t.costBucket===10)?'每 10 分钟一行（2h 内目标）':'每小时一行')+'</h4>'+ costBlockHTML(t) +
       '</div>'+
       '<div class="sec"><h4>生效资源 · 单位 w 曝光</h4>'+
         '<table><thead><tr><th>资源</th><th>预算</th><th>时间</th><th>消耗</th><th>状态</th></tr></thead><tbody>'+(res||'<tr><td colspan="5" style="color:#98a2b3">暂无卡片数据</td></tr>')+'</tbody></table>'+
