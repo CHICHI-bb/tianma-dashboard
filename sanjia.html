@@ -299,8 +299,6 @@ function sjDur(t){
     +'<span class="m"><small>消耗天马</small><b>'+sjWan(spent)+'</b></span>'
     +'<span class="m"><small>数据状态</small><b style="font-size:12px">'+(t.dataFresh?'数据有效':'等待新数据')+'</b></span>'
     +'</div>'
-    +'<div class="sj-note">播放采样 '+(t.sampleAt?new Date(t.sampleAt).toLocaleTimeString('zh-CN'):'—')+' · 资源回读 '+(t.costAt?new Date(t.costAt).toLocaleTimeString('zh-CN'):'—')+'</div>'
-    +'<div class="sj-note">24h基准：'+(t.deadline?new Date(t.deadline).toLocaleString('zh-CN'):'等待读取发布时间')+' · 资源/观察尾时刻：'+(t.settlementAt?new Date(t.settlementAt).toLocaleString('zh-CN'):'—')+'</div>'
     +(t.advice&&t.advice.text?'<div class="sj-note">'+sjEsc(t.advice.text)+'</div>':'')
     +(t.extMaterial&&!t.materialId?'<div class="sj-note" style="margin-top:6px">后台最近一次投放用自定义物料 <b>'+sjEsc(String(t.extMaterial.id))+'</b>'+(t.extMaterial.title?(' · '+sjEsc(String(t.extMaterial.title))):'')+(t.extMaterial.creator?(' · '+sjEsc(String(t.extMaterial.creator))):'')+' · 下一轮沿用</div>':'')+'<div class="acts2"><a class="lk" href="'+bgl+'" target="_blank">后台记录 →</a>'
     +'<button onclick="sjAddDup(\''+t.bvid+'\')">添加同质</button><button onclick="sjStop(\''+t.id+'\')">不投了</button></div>'+(t.dupOf?'':sjXkHtml(t))+sjWatchHtml(t)+(kid||'')
