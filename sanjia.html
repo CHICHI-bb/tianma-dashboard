@@ -41,6 +41,15 @@ td{padding:7px 6px;border-bottom:1px solid #f5f6f8}
 .tl b{color:#98a2b3;font-family:Consolas,monospace;font-size:11px;font-weight:600}
 .acts{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
 .acts button{flex:1;min-width:130px;padding:9px 0;border-radius:8px;border:1px solid #d0d5dd;background:#fff;font-size:12.5px;font-weight:600;color:#667085;cursor:not-allowed}
+.kfold{margin-top:12px}
+.kfold-head{display:flex;align-items:center;gap:10px;cursor:pointer;background:#fafbfc;border:1px solid #f0f2f5;border-radius:10px;padding:9px 12px;user-select:none}
+.kfold-head:hover{background:#f5f8ff;border-color:#d1e0ff}
+.kfold-head:focus-visible{outline:2px solid #165DFF;outline-offset:2px}
+.kfold-t{font-size:12px;font-weight:700;color:#344054}
+.kfold-s{flex:1;min-width:0;font-size:11.5px;color:#98a2b3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kfold-a{font-size:11.5px;color:#165DFF;font-weight:600;flex:0 0 auto}
+.acts .mgr{flex:1;min-width:130px;text-align:center;padding:9px 0;border-radius:8px;border:1px solid #d1e0ff;background:#f5f8ff;color:#165DFF;font-size:12.5px;font-weight:600;text-decoration:none;line-height:1.45}
+.acts .mgr:hover{background:#eef4ff}
 .acts button.hot{border-color:#fda29b;color:#d92d20}
 .empty{background:#fff;border:1px dashed var(--line);border-radius:16px;padding:50px;text-align:center;color:#98a2b3}
 .foot{color:#98a2b3;font-size:12px;margin-top:24px;text-align:center}
@@ -953,6 +962,8 @@ function timeline(t){
   ss.forEach(s=>items.push([hhmm(s.t),'播放 '+wan(s.v)+'w · 在看 '+(s.on==null?'—':s.on)]));
   return items;
 }
+var KB_FOLD={};   // 重点tab：长分析折叠状态，按 task.id 记住，重渲染不丢
+
 function render(){
   const D=pickKeyData();
   const tasks=D.tasks||[];
@@ -985,6 +996,8 @@ function render(){
     const tot=p.outT+p.outS, gap=t.target-tot;
     let tl='';
     timeline(t).forEach(it=>{tl+='<li><b>'+sjEsc(it[0])+'</b><span>'+sjEsc(it[1])+'</span></li>'});
+    const foldOpen=!!KB_FOLD[t.id];
+    const bgl=SJ_MGR+'tianma/position?card_classify=1&resource_type=1&resource_oid='+encodeURIComponent(t.bvid);
 
     const card=document.createElement('div'); card.className='task'; card.setAttribute('data-bvid',t.bvid);
     card.innerHTML=
@@ -997,6 +1010,13 @@ function render(){
         '<div class="k"><small>预测终值·差 '+(t.pred&&t.pred.pred?wan(t.target*10000-t.pred.pred)+'w':'—')+'</small><b style="font-size:17px">'+(t.pred?wan(t.pred.pred)+'w':'—')+'</b></div>'+
       '</div>'+
       '<div class="adv" style="border-left-color:'+adColor+'"><b>当前建议</b><span style="color:'+adColor+'">'+sjEsc(ad.text)+'</span></div>'+
+      '<div class="kfold">'+
+        '<div class="kfold-head" role="button" tabindex="0" aria-expanded="'+(foldOpen?'true':'false')+'">'+
+          '<span class="kfold-t">长分析</span>'+
+          '<span class="kfold-s">达成曲线 · 每 5 分钟增量 · 在看冲刺 · 拆解预览 · 生效资源 · 事件时间线</span>'+
+          '<span class="kfold-a">'+(foldOpen?'收起 ▴':'展开 ▾')+'</span>'+
+        '</div>'+
+        '<div class="kfold-body" style="display:'+(foldOpen?'block':'none')+'">'+
       '<div class="chart"><div class="ct"><span>达成曲线 · 目标 '+t.target+'w · '+hhmm(+new Date(t.deadline))+' 截止</span></div><div class="c1"></div></div>'+
       '<div class="grid2">'+
         '<div class="chart"><div class="ct"><span>每 5 分钟增量（虚线=达标所需）</span></div><div class="c2"></div></div>'+
@@ -1011,11 +1031,14 @@ function render(){
         '<table><thead><tr><th>资源</th><th>预算</th><th>时间</th><th>消耗</th><th>状态</th></tr></thead><tbody>'+(res||'<tr><td colspan="5" style="color:#98a2b3">暂无卡片数据</td></tr>')+'</tbody></table>'+
       '</div>'+
       '<div class="sec"><h4>事件时间线</h4><ul class="tl">'+tl+'</ul></div>'+
+        '</div>'+
+      '</div>'+
       '<div class="acts">'+
         '<button data-act="add_story" data-id="'+t.id+'">＋ 投新一轮 Story</button>'+
         '<button data-act="stop_story" data-id="'+t.id+'">停 Story</button>'+
         '<button class="hot" data-act="stop_tianma" data-id="'+t.id+'">停天马</button>'+
         '<button data-act="refresh">刷新数据</button>'+
+        '<a class="mgr" href="'+bgl+'" target="_blank" rel="noopener">后台记录 →</a>'+
       '</div>'+
       '<div id="kMsg_'+t.id+'" style="font-size:11.5px;color:#98a2b3;margin-top:8px"></div>'+
       '';
@@ -1023,6 +1046,19 @@ function render(){
     card.querySelector('.c1').appendChild(drawMain(t));
     card.querySelector('.c2').appendChild(drawBar(t));
     card.querySelector('.c3').appendChild(drawSprint(t));
+    (function(){
+      var head=card.querySelector('.kfold-head'), fbody=card.querySelector('.kfold-body');
+      if(!head||!fbody) return;
+      function toggle(){
+        var op=fbody.style.display==='none';
+        fbody.style.display=op?'block':'none';
+        KB_FOLD[t.id]=op;
+        head.setAttribute('aria-expanded',op?'true':'false');
+        var a=head.querySelector('.kfold-a'); if(a) a.textContent=op?'收起 ▴':'展开 ▾';
+      }
+      head.addEventListener('click',toggle);
+      head.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } });
+    })();
   });
   kbCount(tasks.filter(function(t){return t.status==='running';}).length);
   if(!tasks.length){ var ls=document.getElementById('kList'); if(ls) ls.innerHTML='<div class="empty" style="padding:32px;text-align:center">暂无重点稿件任务 · 点上方『＋ 新建任务』登记'+sgBtn()+'</div>'; return; }
