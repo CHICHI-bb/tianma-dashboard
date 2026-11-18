@@ -1192,7 +1192,7 @@ function kpEstText(){
     var S=kpMag(tg,h,kind,'story'), T=kpMag(tg,h,kind,'tianma');
     var hrs=h<=7?6:8;
     var out='量级预估（窗口 '+h.toFixed(1)+'h，一次性 '+hrs+'h）：';
-    out+= zero ? '涉 0 只投天马 强保量 '+(T/10000)+'w' : 'Story 强保量 '+(S/10000)+'w + 天马 强保量 '+(T/10000)+'w';
+    out+='Story 强保量 '+(S/10000)+'w + 天马 强保量 '+(T/10000)+'w'+(zero?'（天马勾涉零）':'');
     if(kind&&KP_TYPES[kind]){var w=KP_TYPES[kind].water||20; if(tg>w) out+=' · 目标高于该类水位 '+w+'w';}
     return out;
   }catch(e){return '量级预估：计算失败';}
