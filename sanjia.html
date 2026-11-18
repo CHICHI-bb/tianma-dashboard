@@ -172,7 +172,7 @@ td{padding:7px 6px;border-bottom:1px solid #f5f6f8}
 <section id="paneSanjia">
   <h1>三家稿件 · 自动投放</h1>
   <p class="lead">发布时间＋24h 为基准 · 常规封顶40w，难稿/同质70w · 到期不足40w实耗且播放不足5w继续补投。播放数据约每5分钟采集；卡片状态约每60秒查询；消耗按后台回读更新。</p>
-  <div style="margin:0 0 14px;display:flex;gap:8px;align-items:center"><input id="sj_search" placeholder="搜 BV / av 号查投放状态" onkeydown="if(event.key==='Enter')sjSearch()" style="flex:1;max-width:300px;padding:8px 12px;border:1px solid #d0d5dd;border-radius:8px;font-size:13px"><button onclick="sjSearch()" style="padding:8px 14px;border:1px solid #165DFF;background:#165DFF;color:#fff;border-radius:8px;font-size:13px;cursor:pointer">搜索</button></div><button onclick="sjSetExecKey()" style="font-size:12px">执行权限</button><div id="sj_result"></div><div id="sanjia"></div>
+  <div style="margin:0 0 14px;display:flex;gap:8px;align-items:center"><input id="sj_search" placeholder="搜 BV / av 号查投放状态" onkeydown="if(event.key==='Enter')sjSearch()" style="flex:1;max-width:300px;padding:8px 12px;border:1px solid #d0d5dd;border-radius:8px;font-size:13px"><button onclick="sjSearch()" style="padding:8px 14px;border:1px solid #165DFF;background:#165DFF;color:#fff;border-radius:8px;font-size:13px;cursor:pointer">搜索</button></div><div id="sj_result"></div><div id="sanjia"></div>
   <div class="foot" id="foot"></div>
 </section>
 <section id="paneKey" style="display:none">
@@ -513,7 +513,7 @@ setInterval(reloadData,60000);
   var sjPendingRequests={};
   function sjRecoverCover(id,resume){return sjDo('act='+(resume?'resume_cover':'reconcile_delivery')+'&taskId='+encodeURIComponent(id)).then(function(j){sjToast(j.msg||j.error,!j.ok);return fetchLive();});}
   function sjSetExecKey(){var old=document.getElementById('sj_exec_key');if(old){old.showModal();return;}var box=document.createElement('dialog');box.id='sj_exec_key';box.innerHTML='<form method="dialog"><label>执行密钥 <input type="password" id="sj_exec_key_value" autocomplete="off"></label><button value="cancel">取消</button><button value="save">保存</button></form>';box.addEventListener('close',function(){if(box.returnValue==='save'){sessionStorage.setItem('sj_panel_key',document.getElementById('sj_exec_key_value').value);sjToast('已保存到本次浏览器会话');}});document.body.appendChild(box);box.showModal();}
-  function sjPanelKey(){if(window.SJ_LOCAL_TOKEN||window.SJ_KEY)return window.SJ_LOCAL_TOKEN||window.SJ_KEY;try{return sessionStorage.getItem('sj_panel_key')||'';}catch(e){return '';}}
+  function sjPanelKey(){return '';}  /* 2026-11-18 用户拍板：密钥与来源校验已全面取消，不再携带 X-Panel-Key */
   function sjAssetUrl(value){var v=String(value||'');if(v[0]==='/')return ((typeof TUNNEL!=='undefined'&&TUNNEL)||window.SJ_EXEC||'')+v;return /^(data:image\/|https?:\/\/|blob:)/.test(v)?v:'';}
   async function sjDo(qs){
     var params=new URLSearchParams(qs);params.delete('k');params.set('json','1');
