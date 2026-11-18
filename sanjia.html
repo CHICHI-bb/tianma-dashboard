@@ -302,7 +302,6 @@ function renderSanjia(D){
   var alerts=(D.alerts||[]).filter(function(a){return a.level==='bad'||a.level==='warn';}); if(!DEMO){ if(window.__sjAlertBase===undefined){ var nwA=(typeof LIVE!=='undefined'&&LIVE&&LIVE.now)||Date.now(); var oldA=null; try{ oldA=localStorage.getItem('sj_alert_water'); }catch(eA){} window.__sjAlertBase=(oldA===null||oldA==='')?nwA:(Number(oldA)||0); try{ localStorage.setItem('sj_alert_water',String(nwA)); }catch(eA2){} } alerts=alerts.filter(function(a){return Number(a.t)>window.__sjAlertBase;}); } alerts=alerts.slice(0,4);
   var head='<div class="sj-head"><div class="t"><h2>三家稿件</h2><small id="sj_sum"></small></div>'
     +'<div style="display:flex;gap:8px;align-items:center">'
-    +'<a href="'+SJ_EXEC+'/sanjia.html" target="_blank" style="font-size:12px;color:#165DFF;text-decoration:none;border:1px solid #d1e0ff;background:#f5f8ff;border-radius:99px;padding:5px 12px">实时看板</a>'
     +'<button class="sj-btn" onclick="sjOpenForm()">＋ 登记三家稿件</button></div></div>';
   if(!arr.length){
     box.innerHTML=head+'<div class="empty" style="padding:30px">暂无三家稿件任务 · 发布时间＋24h目标5w播放，登记后自动续资源</div>';
@@ -432,10 +431,14 @@ function sjStateBar(){
       +'<span style="color:#98a2b3;margin-left:8px;font-size:12px">站点域名不直连隧道 · 数据定时更新 · 实时版见 GitHub Pages 或隧道直连</span>';
     return;
   }
-  el.innerHTML='<span style="color:#d92d20;font-weight:700">● 实时通道不通</span>'
-    +'<span style="color:#98a2b3;margin-left:8px;font-size:12px">正在显示快照</span>'
-    +'<input id="sj_tun_in" placeholder="粘贴新的隧道地址" style="margin-left:10px;width:300px;padding:4px 8px;border:1px solid #d0d5dd;border-radius:6px;font-size:12px">'
-    +'<button onclick="sjSetTunnel()" style="margin-left:6px;padding:4px 12px;border:1px solid #165DFF;background:#165DFF;color:#fff;border-radius:6px;font-size:12px;cursor:pointer">更新</button>';
+  // 2026-11-18 改：去掉红色「实时通道不通」告警行与手填隧道地址输入框。
+  // 理由：快照每 10 分钟由服务端自动发布（sanjia-runner 节流），拿到的是 ≤10 分钟的旧数据，
+  // 执行链路（投放/撤投/自愈）全在服务端，不受这条通道影响；隧道地址也由 tunnel-watch 自动接管，
+  // 手填基本用不上。保留一行灰色小字说明当前是快照、以及一个「改地址」小入口用于极端兜底。
+  var snapAt='';
+  try{ if(window.TIANMA_SANJIA&&window.TIANMA_SANJIA.publishedAt) snapAt=new Date(window.TIANMA_SANJIA.publishedAt).toLocaleTimeString('zh-CN'); }catch(e0){}
+  el.innerHTML='<span style="color:#98a2b3;font-size:12px">● 快照'+(snapAt?(' '+snapAt):'')+'</span>'
+    +'<span style="color:#c0c6d4;margin-left:8px;font-size:12px;cursor:pointer" onclick="sjResetTunnel()">改地址</span>';
 }
 function sjToggleDead(hd){
   var list=hd.nextElementSibling; if(!list) return;
@@ -457,7 +460,7 @@ function renderSj(){
   else if(SHARED_OK){ f.textContent='共享数据 · '+new Date(SHARED_AT).toLocaleTimeString('zh-CN')+' 更新 · 每 5 分钟自动同步'; }
   else if(window.TIANMA_SANJIA&&window.TIANMA_SANJIA.publishedAt){
     var age=Math.max(0,Math.round((Date.now()-window.TIANMA_SANJIA.publishedAt)/3600000));
-    f.textContent='数据快照 '+new Date(window.TIANMA_SANJIA.publishedAt).toLocaleString('zh-CN')+'（约 '+age+' 小时前）· 实时通道不通，可在上方改隧道地址';
+    f.textContent='数据快照 '+new Date(window.TIANMA_SANJIA.publishedAt).toLocaleString('zh-CN')+'（约 '+age+' 小时前）· 快照模式（每 10 分钟自动更新）';
   } else { f.textContent=''; }
 }
 function toggleDemo(){ DEMO=!DEMO; AUTO_DEMO=false; paintDemoBar(); renderSj(); }
@@ -470,7 +473,9 @@ function paintDemoBar(){
    +'<button onclick="toggleDemo()" style="margin-left:12px;border:1px solid #f5d78e;background:#fff;color:#b54708;border-radius:6px;padding:2px 10px;font-size:12px;cursor:pointer">切回真实数据</button>';
 }
 (function(){ var box=document.getElementById('sanjia'); if(!box) return; var d=document.createElement('div'); d.id='demoBar'; d.style.cssText='display:none;margin:0 0 14px;background:#fffaf0;border:1px solid #f5d78e;border-radius:10px;padding:10px 14px;font-size:12.5px'; box.parentNode.insertBefore(d,box);
-  var n=document.createElement('div'); n.id='sj_net'; n.style.cssText='margin:0 0 12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px'; box.parentNode.insertBefore(n,box); })();
+  // 2026-11-18 改：整行「实时通道 / 快照 + 改地址」按用户要求移除，不再插入 sj_net 容器。
+  // 数据新鲜度看列表头部的「数据 快照 HH:MM」与页脚时间即可；隧道地址由 tunnel-watch 自动接管。
+})();
   var SHARED=null, SHARED_OK=false, SHARED_AT=0;
   async function loadSharedState(){
     // ⚠️ 暂停使用：站点平台共享数据的部分 id 哈希分片损坏（写入后 get/list 都 internal_error，7/21 条不可读）。
