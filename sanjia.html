@@ -915,14 +915,26 @@ function svgBox(w,h){const s=document.createElementNS(NS,'svg');s.setAttribute('
 function drawMain(t){
   const W=1120,H=230,L=40,R=12,TP=14,B=26;
   const T=+new Date(t.startAt), DL=+new Date(t.deadline), total=Math.max(1,(DL-T)/60000);
-  const dmax=Math.max(t.target*10000*1.25,(t.v||0)*1.3,1);
+  const dmax=Math.max(t.target*10000*1.25,(t.v||0)*1.3,(t.pred&&t.pred.pred?t.pred.pred*1.12:0),1);   // 2026-11-18：把预测终值算进 Y 轴，否则橙线画出图外
   const X=mn=>L+(mn/total)*(W-L-R), Y=v=>TP+(1-v/dmax)*(H-TP-B);
   const svg=svgBox(W,H);
   for(let i=0;i<=4;i++){const v=dmax*i/4;el(svg,'line',{x1:L,y1:Y(v),x2:W-R,y2:Y(v),stroke:'#f0f2f5'});tx(svg,L-6,Y(v)+3,wan(v),{'text-anchor':'end'})}
   for(let i=0;i<=4;i++){const mn=total*i/4;tx(svg,X(mn),H-9,hhmm(T+mn*60000),{'text-anchor':'middle'})}
   const v0=t.samples.length?t.samples[0].v:0;
-  el(svg,'line',{x1:X(0),y1:Y(v0),x2:X(total),y2:Y(t.target*10000),stroke:'#d0d5dd','stroke-width':1.6,'stroke-dasharray':'5 4'});
-  tx(svg,X(total)-2,Y(t.target*10000)-7,'目标 '+t.target+'w',{'text-anchor':'end',fill:'#98a2b3','font-size':11});
+  // 2026-11-18：灰线原来是从开投点直线连到目标值（同目标同窗口的稿件完全一致，没用到数据）。
+  // 改成「按需达标线」：从当前播放点出发、按“剩余时间刚好到目标”的斜率画，每篇稿件都不同；
+  // 橙色虚线仍是按最近 30 分钟平均速率外推的预测线，灰橙一对比就看得出还要提速多少。
+  const lastS=t.samples.length?t.samples[t.samples.length-1]:null;
+  if(lastS){
+    const lp0=[(lastS.t-T)/60000,lastS.v];
+    const remainMin=Math.max(1,total-lp0[0]);
+    const needRate=(t.target*10000-lp0[1])/remainMin;
+    el(svg,'line',{x1:X(lp0[0]),y1:Y(lp0[1]),x2:X(total),y2:Y(t.target*10000),stroke:'#98a2b3','stroke-width':1.5,'stroke-dasharray':'5 4'});
+    const _gap=(lp0[1]-t.target*10000);
+    const _lab = needRate>=0 ? ('按需 +'+Math.round(needRate)+' 播放/分 → 目标 '+t.target+'w')
+                             : ('已超额 '+(Math.round(_gap/1000)/10)+'w · 可降速 → 目标 '+t.target+'w');
+    tx(svg,X(total)-2,Y(t.target*10000)-7,_lab,{'text-anchor':'end',fill:'#8a94a6','font-size':10.5});
+  }
   const pts=t.samples.map(s=>[(s.t-T)/60000,s.v]);
   if(pts.length>1){
     el(svg,'polygon',{points:[[X(0),Y(v0)]].concat(pts.map(p=>[X(p[0]),Y(p[1])])).concat([[X(pts[pts.length-1][0]),Y(0)],[X(0),Y(0)]]).map(p=>p[0]+','+p[1]).join(' '),fill:'#165DFF',opacity:.06});
@@ -1076,7 +1088,7 @@ function render(){
           '<span class="kfold-a">'+(foldOpen?'收起 ▴':'展开 ▾')+'</span>'+
         '</div>'+
         '<div class="kfold-body" style="display:'+(foldOpen?'block':'none')+'">'+
-      '<div class="chart"><div class="ct"><span>达成曲线 · 目标 '+t.target+'w · '+hhmm(+new Date(t.deadline))+' 截止</span></div><div class="c1"></div></div>'+
+      '<div class="chart"><div class="ct"><span>达成曲线 · 目标 '+t.target+'w · '+hhmm(+new Date(t.deadline))+' 截止 <span style="color:#98a2b3">（灰虚线=按需速率 · 橙虚线=当前30min速率预测）</span></span></div><div class="c1"></div></div>'+
       '<div class="grid2">'+
         '<div class="chart"><div class="ct"><span>每 5 分钟增量（虚线=达标所需）</span></div><div class="c2"></div></div>'+
         '<div class="chart"><div class="ct"><span>在看冲刺（目标 1000+）</span></div><div class="c3"></div></div>'+
