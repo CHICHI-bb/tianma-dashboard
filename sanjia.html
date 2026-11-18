@@ -15,6 +15,9 @@ h1{font-size:28px;margin:0 0 6px;letter-spacing:-.02em}
 .task{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin-bottom:18px}
 .th{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:14px}
 .bv{font-size:17px;font-weight:700;font-family:Consolas,monospace}
+a.bv{color:inherit;text-decoration:none;border-bottom:1px dashed #d0d5dd}
+a.bv:hover{color:#165DFF;border-bottom-color:#165DFF}
+a.bv:focus-visible{outline:2px solid #165DFF;outline-offset:2px;border-radius:3px}
 .tt{color:var(--sub);font-size:13px}
 .st{font-size:12px;padding:3px 10px;border-radius:99px;font-weight:600}
 .st.ok{background:#ecfdf3;color:var(--green)}.st.warn{background:#fffaeb;color:var(--orange)}.st.bad{background:#fef3f2;color:var(--red)}.st.idle{background:#f2f4f7;color:#667085}
@@ -1012,7 +1015,7 @@ function render(){
 
     const card=document.createElement('div'); card.className='task'; card.setAttribute('data-bvid',t.bvid);
     card.innerHTML=
-      '<div class="th"><div><span class="bv">'+t.bvid+'</span> <span class="tt">'+sjEsc(t.title||'')+'</span></div><div><span class="st '+cls+'">'+txt+'</span></div></div>'+
+      '<div class="th"><div><a class="bv" href="https://www.bilibili.com/video/'+t.bvid+'" target="_blank" rel="noopener" title="打开 B 站播放页">'+t.bvid+'</a> <span class="tt">'+sjEsc(t.title||'')+'</span></div><div><span class="st '+cls+'">'+txt+'</span></div></div>'+
       '<div class="adv"><b>数据状态</b><span>'+((t.dataFresh)?'数据有效':'等待新数据')+' · 播放采样 '+(t.sampleAt?hhmm(t.sampleAt):'—')+' · 资源回读 '+(t.costAt?hhmm(t.costAt):'—')+'</span></div>'+
       '<div class="kpis">'+
         '<div class="k"><small>当前播放 / 目标 <span class="live-at" style="color:#039855"></span></small><b><span class="live-v">'+wan(t.v)+'</span><span style="font-size:13px;color:#98a2b3"> / '+t.target+'w</span></b></div>'+
