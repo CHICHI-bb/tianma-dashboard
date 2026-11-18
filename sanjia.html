@@ -1064,7 +1064,7 @@ function render(){
       '<div class="kpis">'+
         '<div class="k"><small>当前播放 / 目标 <span class="live-at" style="color:#039855"></span></small><b><span class="live-v">'+wan(t.v)+'</span><span style="font-size:13px;color:#98a2b3"> / '+t.target+'w</span></b></div>'+
         '<div class="k"><small>近 5min 增量</small><b>'+(t.delta==null?'—':(t.delta>=0?'+':'')+wan(t.delta))+'w</b></div>'+
-        '<div class="k"><small>预计达成时间</small><b style="font-size:17px;color:'+(t.pred&&t.pred.eta>0&&t.pred.eta>+new Date(t.deadline)?'#d92d20':'#101828')+'">'+(t.pred?(t.pred.eta===-1?'已达成':(t.pred.eta==null?'—':hhmm(t.pred.eta))):'—')+'</b></div>'+
+        '<div class="k"><small title="按最近 30 分钟平均增速外推">预计达成时间（30min 速率）</small><b style="font-size:17px;color:'+(t.pred&&t.pred.eta>0&&t.pred.eta>+new Date(t.deadline)?'#d92d20':'#101828')+'">'+(t.pred?(t.pred.eta===-1?'已达成':(t.pred.eta==null?'—':hhmm(t.pred.eta))):'—')+'</b></div>'+
         '<div class="k"><small>预测终值·差 '+(t.pred&&t.pred.pred?wan(t.target*10000-t.pred.pred)+'w':'—')+'</small><b style="font-size:17px">'+(t.pred?wan(t.pred.pred)+'w':'—')+'</b></div>'+
       '</div>'+
       '<div class="adv" style="border-left-color:'+adColor+'"><b>当前建议</b><span style="color:'+adColor+'">'+sjEsc(ad.text)+'</span></div>'+
@@ -1244,10 +1244,30 @@ document.addEventListener('click',function(e){
     var bar=document.getElementById('kBar2'); if(!bar)return;
     bar.innerHTML='<span class="pill" style="background:#eff4ff;color:#165DFF;border-color:#b2ccff"><b>操作走本机执行端</b> · 提交后自动刷新本页，无需离开</span>'
       +'<button onclick="KB.openForm()" style="padding:5px 14px;border-radius:99px;border:0;background:#165DFF;color:#fff;font-size:13px;font-weight:600;cursor:pointer">＋ 新建任务</button>'
+      +'<button onclick="KB.exportBv()" title="导出重点 tab 全部 BV（一行一个，同时复制到剪贴板）" style="padding:5px 14px;border-radius:99px;border:1px solid #d0d5dd;background:#fff;color:#344054;font-size:13px;font-weight:600;cursor:pointer">导出 BV</button>'
       +'<a href="'+API+'/do?act=ping&back='+encodeURIComponent(BACK)+'" style="padding:5px 12px;border-radius:99px;border:1px solid #e4e7ec;background:#fff;font-size:12.5px;color:#667085;text-decoration:none">检测本机</a>';
   })();
 
+// 2026-11-18：导出重点 tab 全部 BV（一行一个，同时写剪贴板）
+function exportBv(){
+  var D=pickKeyData(); var tasks=(D&&D.tasks)||[];
+  var seen={}, list=[];
+  tasks.forEach(function(t){ if(t&&/^BV[0-9A-Za-z]{8,12}$/.test(String(t.bvid||''))&&!seen[t.bvid]){ seen[t.bvid]=1; list.push(t.bvid); } });
+  if(!list.length){ kbMsg('没有可导出的 BV',true); return; }
+  var text=list.join('\n');
+  try{ if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(function(){}); }catch(e){}
+  var d=new Date(), p2=function(n){return String(n).padStart(2,'0');};
+  var name='重点稿件BV-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'-'+p2(d.getHours())+p2(d.getMinutes())+'.txt';
+  try{
+    var blob=new Blob([text],{type:'text/plain;charset=utf-8'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click();
+    setTimeout(function(){ try{ URL.revokeObjectURL(url); a.remove(); }catch(e){} },1500);
+    kbMsg('已导出 '+list.length+' 个 BV（已同时复制到剪贴板）',false);
+  }catch(e){ kbMsg('下载失败：'+(e&&e.message||e)+'（BV 已复制到剪贴板）',true); }
+}
 window.KB={
+  exportBv:exportBv,
   est:function(){var e=document.getElementById('f_est');if(e)e.textContent=kpEstText();},
   render:render, openForm:openForm, submitTask:submitTask,
   hideForm:function(){ var m=document.getElementById('kMask'); if(m) m.style.display='none'; },
