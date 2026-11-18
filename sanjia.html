@@ -1030,11 +1030,13 @@ function render(){
 }
 var DEMO=false, AUTO_DEMO=false, KB_LIVE=null;
 function kbMsg(t,bad){ if(window.sjToast){ sjToast(t,bad); } else { try{ alert((bad?'✗ ':'✓ ')+t); }catch(e){} } }
-function kbAct(qs){
-  if(DEMO){ kbMsg('演示数据不能执行操作，请先点『切回真实数据』',true); return; }
-  var done=function(j){ if(j&&j.ok){ kbMsg(j.msg||'已执行',false); kbSync(); } else { kbMsg((j&&j.msg)||'执行失败',true); var m=document.getElementById('f_msg'); if(m&&qs.indexOf('act=new')===0) m.textContent=(j&&j.msg)||'登记失败'; } };
-  if(window.sjDo){ sjDo(qs).then(done).catch(function(e){ kbMsg(((e&&e.message)||e)||'执行失败',true); }); }
-  else { kbMsg('执行模块尚未加载，请刷新后重试',true); }
+function kbAct(qs,onDone){
+  var fin=function(ok,msg){ try{ if(onDone)onDone(ok,msg); }catch(e){} };
+  var fail=function(msg){ kbMsg(msg||'执行失败',true); var m=document.getElementById('f_msg'); if(m&&qs.indexOf('act=new')===0) m.textContent=msg||'登记失败'; fin(false,msg); };
+  if(DEMO){ fail('演示数据不能执行操作，请先点『切回真实数据』'); return; }
+  var done=function(j){ if(j&&j.ok){ kbMsg(j.msg||'已执行',false); kbSync(); fin(true,j.msg||''); } else { fail((j&&j.msg)||'执行失败'); } };
+  if(window.sjDo){ sjDo(qs).then(done).catch(function(e){ fail(((e&&e.message)||e)||'执行失败'); }); }
+  else { fail('执行模块尚未加载，请刷新后重试'); }
 }
 function kbSync(force){
   if(window.fetchLive){
@@ -1078,7 +1080,9 @@ setInterval(reloadData,60000);
   var API=(window.TIANMA_API||'');
   var BACK=(location.href.split('#')[0])+'#tab=key';
     var openForm=function(){document.getElementById('kMask').style.display='flex';};
+  var kbBusy=false;
   var submitTask=function(){
+    if(kbBusy) return;                                  // 2026-11-18：防连点重复登记
     var bv=document.getElementById('f_bv').value.trim();
     var tg=Number(document.getElementById('f_tg').value);
     var md=document.getElementById('f_md').value;
@@ -1088,11 +1092,25 @@ setInterval(reloadData,60000);
     var dl;
     if(md==='at'){var t=document.getElementById('f_at').value||'18:00';var d=new Date();var p2=t.split(':');d.setHours(+p2[0],+p2[1],0,0);if(d.getTime()<=Date.now())d.setDate(d.getDate()+1);dl=d.toISOString();}
     else dl=new Date(Date.now()+2*3600*1000).toISOString();
+    // 2026-11-18：提交中禁按钮、成功后自动关窗（原实现只弹 toast，弹窗一直挂着）
+    var btn=document.querySelector('#kMask button[onclick="KB.submitTask()"]');
+    kbBusy=true; el.textContent='';
+    if(btn){ btn.disabled=true; btn.textContent='提交中…'; btn.style.opacity='.7'; }
+    var reset=function(){ kbBusy=false; if(btn){ btn.disabled=false; btn.textContent='开始投放'; btn.style.opacity='1'; } };
     kbAct('act=new&bvid='+encodeURIComponent(bv)+'&target='+tg+'&deadline='+encodeURIComponent(dl)
       +'&qidian='+encodeURIComponent(document.getElementById('f_qd').value||'00:00:15')
       +'&materialId='+encodeURIComponent(document.getElementById('f_mt').value||'')
       +'&isZero='+(document.getElementById('f_z').value==='1'?'1':'0')
-      +'&remark='+encodeURIComponent(document.getElementById('f_rk').value||''));
+      +'&remark='+encodeURIComponent(document.getElementById('f_rk').value||''),
+      function(ok,msg){
+        reset();
+        if(!ok){ el.textContent=msg||'登记失败'; return; }   // 失败保留弹窗，把真实原因写在表单里
+        var m=document.getElementById('kMask'); if(m) m.style.display='none';
+        el.textContent='';
+        var b1=document.getElementById('f_bv'); if(b1) b1.value='';   // 成功后清空，便于连续登记下一篇
+        var b2=document.getElementById('f_mt'); if(b2) b2.value='';
+        var b3=document.getElementById('f_rk'); if(b3) b3.value='';
+      });
   };
 document.addEventListener('click',function(e){
   var b=e.target.closest&&e.target.closest('#paneKey button[data-act]');
