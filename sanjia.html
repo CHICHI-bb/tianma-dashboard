@@ -348,7 +348,7 @@ function renderSanjia(D){
   box.innerHTML=h;
 }
 // ===== 实时通道：优先走隧道拿实时数据；拿不到自动回退静态快照 =====
-  var SJ_DEFAULT_TUNNEL='https://welcome-usage-marathon-ten.trycloudflare.com';   // 服务端 tunnel-watch.js 会更新发布目录 tunnel.json；部署包不写死临时隧道
+  var SJ_DEFAULT_TUNNEL='https://wrapped-faster-static-pupils.trycloudflare.com';   // 服务端 tunnel-watch.js 会更新发布目录 tunnel.json；部署包不写死临时隧道
 function sjLS(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}catch(e){}}
 var TUNNEL='';
 var LIVE=null, LIVE_OK=false, LIVE_AT=0, LIVE_TRIED='';
@@ -356,8 +356,9 @@ function sjCandidates(){
   var q=null;try{q=new URLSearchParams(location.search).get('tunnel');}catch(e){}
   if(q)sjLS('sj_tunnel',q.replace(/\/+$/,''));
   var list=[];var a=sjLS('sj_tunnel'),b=sjLS('sj_tunnel_ok'),c=SJ_DEFAULT_TUNNEL;
-  if(a)list.push(a);
-  if(b&&list.indexOf(b)<0)list.push(b);
+  // 2026-11-18 修：上次成功的地址排最前（隧道抖动时它命中率最高），再试记账地址与默认值
+  if(b)list.push(b);
+  if(a&&list.indexOf(a)<0)list.push(a);
   if(list.indexOf(c)<0)list.push(c);
   return list.map(function(x){return String(x).replace(/\/+$/,'');});
 }
@@ -368,20 +369,25 @@ async function fetchLive(){
     var r0=await fetch('/api/state?live=1',{cache:'no-store',signal:c0.signal});clearTimeout(t0);
     if(r0.ok){ var j0=await r0.json(); if(j0&&j0.sanjia){ TUNNEL=location.origin; LIVE=j0; LIVE_OK=true; LIVE_AT=Date.now(); LIVE_TRIED='same-origin'; return true; } }
   }catch(e0){}
+  // 2026-11-18 修：quick tunnel 短连接成功率实测约 1/3（同址连测 200耗时2.9s / 超时20s / 超时20s）。
+  // 原来每个候选只试一次、超时12s，抖动期三个候选全挂的概率约 1/3，用户就只看到「实时通道不通」。
+  // 改为每个候选连试 2 次、超时压到 8s，失败间让出 0.4s 再打（短连接重试通常第二次就中）。
   for(var i=0;i<list.length;i++){
     var u=list[i];
-    try{
-      var ctl=new AbortController();var tm=setTimeout(function(){ctl.abort();},12000);
-      var r=await fetch(u+'/api/state?live=1',{cache:'no-store',signal:ctl.signal});
-      clearTimeout(tm);
-      if(!r.ok) throw new Error('http '+r.status);
-      var j=await r.json();
-      if(!j||!j.sanjia) throw new Error('bad payload');
-      TUNNEL=u; sjLS('sj_tunnel_ok',u);
-      if(list[0]!==u) sjLS('sj_tunnel',u);
-      LIVE=j; LIVE_OK=true; LIVE_AT=Date.now(); LIVE_TRIED=list.join(' | ');
-      return true;
-    }catch(e){}
+    for(var at=0;at<2;at++){
+      var ctl=new AbortController();var tm=setTimeout(function(){ctl.abort();},8000);
+      try{
+        var r=await fetch(u+'/api/state?live=1',{cache:'no-store',signal:ctl.signal});
+        clearTimeout(tm);
+        if(!r.ok) throw new Error('http '+r.status);
+        var j=await r.json();
+        if(!j||!j.sanjia) throw new Error('bad payload');
+        TUNNEL=u; sjLS('sj_tunnel_ok',u);
+        if(list[0]!==u) sjLS('sj_tunnel',u);
+        LIVE=j; LIVE_OK=true; LIVE_AT=Date.now(); LIVE_TRIED=list.join(' | ');
+        return true;
+      }catch(e){clearTimeout(tm);await new Promise(function(r2){setTimeout(r2,400);});}
+    }
   }
     // 全部候选失败 → 从页面同仓发布的 tunnel.json 自动发现最新隧道地址（服务端换址自动推送）
   try{
