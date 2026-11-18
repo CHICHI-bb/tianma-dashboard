@@ -206,9 +206,10 @@ td{padding:7px 6px;border-bottom:1px solid #f5f6f8}
   </div>
   <div class="fm" id="f_atbox" style="display:none"><label>达成时刻</label><input id="f_at" type="time" value="18:00"></div>
   <div class="fm"><label>稿件类型（影响投放量级）</label><select id="f_kind" onchange="KB.est()">
+    <option value="" selected>不选（按窗口口径，不套类型系数）</option>
     <option value="习语">习语</option>
     <option value="热门双会面">热门 双 会面</option>
-    <option value="单国内" selected>单 国内</option>
+    <option value="单国内">单 国内</option>
     <option value="单国际">单 国际</option>
     <option value="非热双会面">非热 双 会面</option>
     <option value="时政周边">时政周边</option>
@@ -1176,7 +1177,7 @@ setInterval(reloadData,60000);
 var KP_TYPES={'习语':{story:16.76,tianma:6.02,water:20},'热门双会面':{story:14.37,tianma:9.25,water:20},'单国内':{story:11.72,tianma:5.91,water:20},'单国际':{story:13.84,tianma:7.36,water:8},'非热双会面':{story:12.48,tianma:5.20,water:10},'时政周边':{story:11.92,tianma:6.98,water:15},'时政微纪录':{story:5.61,tianma:4.33,water:20}};
 var KP_MEAN={story:11.19,tianma:6.54};
 function kpWinEff(h){var x=Math.max(6,Math.min(12,h));return 6.67+(x-6)*0.8325;}
-function kpFactor(kind,ch){var d=KP_TYPES[kind]||KP_TYPES['单国内'];var r=d[ch]/KP_MEAN[ch];return r<0.85?r:1;}
+function kpFactor(kind,ch){if(!kind||!KP_TYPES[kind])return 1;var d=KP_TYPES[kind];var r=d[ch]/KP_MEAN[ch];return r<0.85?r:1;}
 function kpMag(targetWan,h,kind,ch){var eff=kpWinEff(h)*kpFactor(kind,ch);var raw=targetWan*10000/(eff/100);var steps=Math.max(1,Math.round(Number((raw/100000).toFixed(3))));return Math.max(50000,Math.min(2000000,steps*100000));}
 function kpEstText(){
   try{
@@ -1192,8 +1193,7 @@ function kpEstText(){
     var hrs=h<=7?6:8;
     var out='量级预估（窗口 '+h.toFixed(1)+'h，一次性 '+hrs+'h）：';
     out+= zero ? '涉 0 只投天马 强保量 '+(T/10000)+'w' : 'Story 强保量 '+(S/10000)+'w + 天马 强保量 '+(T/10000)+'w';
-    var w=(KP_TYPES[kind]||{}).water||20;
-    if(tg>w) out+=' · 目标高于该类水位 '+w+'w';
+    if(kind&&KP_TYPES[kind]){var w=KP_TYPES[kind].water||20; if(tg>w) out+=' · 目标高于该类水位 '+w+'w';}
     return out;
   }catch(e){return '量级预估：计算失败';}
 }
