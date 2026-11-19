@@ -933,7 +933,10 @@ function svgBox(w,h){const s=document.createElementNS(NS,'svg');s.setAttribute('
 function drawMain(t){
   const W=1120,H=230,L=40,R=12,TP=14,B=26;
   const T=+new Date(t.startAt), DL=+new Date(t.deadline), total=Math.max(1,(DL-T)/60000);
-  const dmax=Math.max(t.target*10000*1.25,(t.v||0)*1.3,(t.pred&&t.pred.pred?t.pred.pred*1.12:0),1);   // 2026-11-18：把预测终值算进 Y 轴，否则橙线画出图外
+  // 2026-11-19：Y 轴上限还要容纳自然曲线与分段预测路径的终点，否则灰实线/橙线会画出图外
+  const _npEnd=(t.pred&&t.pred.natPath&&t.pred.natPath.length)?t.pred.natPath[t.pred.natPath.length-1][1]:0;
+  const _ppEnd=(t.pred&&t.pred.path&&t.pred.path.length)?t.pred.path[t.pred.path.length-1][1]:(t.pred&&t.pred.pred?t.pred.pred:0);
+  const dmax=Math.max(t.target*10000*1.25,(t.v||0)*1.3,_ppEnd*1.12,_npEnd*1.08,1);
   const X=mn=>L+(mn/total)*(W-L-R), Y=v=>TP+(1-v/dmax)*(H-TP-B);
   const svg=svgBox(W,H);
   for(let i=0;i<=4;i++){const v=dmax*i/4;el(svg,'line',{x1:L,y1:Y(v),x2:W-R,y2:Y(v),stroke:'#f0f2f5'});tx(svg,L-6,Y(v)+3,wan(v),{'text-anchor':'end'})}
@@ -943,6 +946,19 @@ function drawMain(t){
   // 改成「按需达标线」：从当前播放点出发、按“剩余时间刚好到目标”的斜率画，每篇稿件都不同；
   // 橙色虚线仍是按最近 30 分钟平均速率外推的预测线，灰橙一对比就看得出还要提速多少。
   const lastS=t.samples.length?t.samples[t.samples.length-1]:null;
+  // 2026-11-19 新增：灰实线 = 不上资源时这篇稿件的自然生长曲线（幂律，锚定发布后首次采样）
+  // 与蓝线的间距就是「资源实际买来的播放」，与目标线的交点就是「光靠自然能不能到」。
+  if(t.pred&&t.pred.natPath&&t.pred.natPath.length>1){
+    const _np=t.pred.natPath, _cf=t.pred.natConf||'中';
+    // 置信度看种子的 age：登记在发布后 20 分钟内=高（种子必然不含投流），
+    // 0.35~1h=中（可能已被放大），>1h=低。中/低用点线+透明度+标注，避免把偏高的自然线当准数。
+    const _at={points:_np.map(p=>X(p[0])+','+Y(p[1])).join(' '),fill:'none',stroke:'#98a2b3','stroke-width':1.5,
+      opacity:(_cf==='高'?.9:(_cf==='中'?.55:.35))};
+    if(_cf!=='高') _at['stroke-dasharray']=(_cf==='中'?'6 3':'2 3');
+    el(svg,'polyline',_at);
+    const _ne=_np[_np.length-1];
+    tx(svg,X(_ne[0])-2,Y(_ne[1])+13,'不投流 ≈ '+wan(_ne[1])+'w'+(_cf==='高'?'':'（'+_cf+'置信）'),{'text-anchor':'end',fill:'#8a94a6','font-size':10});
+  }
   if(lastS){
     const lp0=[(lastS.t-T)/60000,lastS.v];
     const remainMin=Math.max(1,total-lp0[0]);
@@ -959,7 +975,20 @@ function drawMain(t){
     el(svg,'polyline',{points:pts.map(p=>X(p[0])+','+Y(p[1])).join(' '),fill:'none',stroke:'#165DFF','stroke-width':2.2,'stroke-linejoin':'round'});
     pts.forEach(p=>el(svg,'circle',{cx:X(p[0]),cy:Y(p[1]),r:1.8,fill:'#165DFF'}));
   }
-  if(t.pred&&pts.length){
+  if(t.pred&&t.pred.path&&t.pred.path.length>1&&pts.length){
+    // 2026-11-19：过关前的橙线改为分段推演——资源在线期按 30min 速率×夜间系数推进，
+    // 剩余预算买不动时自动掉到自然斜率，所以曲线上能看到真实的拐点；只画到过关那一刻。
+    const _pp=t.pred.path;
+    el(svg,'polyline',{points:_pp.map(p=>X(p[0])+','+Y(p[1])).join(' '),fill:'none',stroke:'#dc6803','stroke-width':2,'stroke-dasharray':'4 4','stroke-linejoin':'round'});
+    const _pe=_pp[_pp.length-1];
+    el(svg,'circle',{cx:X(_pe[0]),cy:Y(_pe[1]),r:3.5,fill:'#fff',stroke:'#dc6803','stroke-width':2});
+    if(t.pred.crossedAt){
+      tx(svg,X(_pe[0])-4,Y(_pe[1])-8,'预计 '+hhmm(t.pred.crossedAt)+' 过关',{'text-anchor':'end',fill:'#dc6803','font-size':10.5});
+    }else if(t.pred.pred){
+      const _gap=Math.max(0,t.target*10000-t.pred.pred);
+      tx(svg,X(_pe[0])-4,Y(_pe[1])-8,'预测 '+wan(t.pred.pred)+'w · 缺口 '+wan(_gap)+'w',{'text-anchor':'end',fill:'#d92d20','font-size':10.5});
+    }
+  } else if(t.pred&&pts.length){
     const lp=pts[pts.length-1];
     el(svg,'line',{x1:X(lp[0]),y1:Y(lp[1]),x2:X(total),y2:Y(t.pred.pred),stroke:'#dc6803','stroke-width':1.8,'stroke-dasharray':'4 4'});
     el(svg,'circle',{cx:X(total),cy:Y(t.pred.pred),r:3.5,fill:'#fff',stroke:'#dc6803','stroke-width':2});
@@ -1052,6 +1081,7 @@ function timeline(t){
   return items;
 }
 var KB_FOLD={};   // 重点tab：长分析折叠状态，按 task.id 记住，重渲染不丢
+ var KB_BODY={};   // 重点tab：已达标小卡「展开数据」状态，按 task.id 记住，重渲染不丢
 
 function render(){
   const D=pickKeyData();
@@ -1105,10 +1135,10 @@ function render(){
       +'<span>实耗 <b>'+wan((Number(t.tianmaSpent)||0)+(Number(t.storySpent)||0))+'w</b></span>'
       +'<span>结算 <b>'+((t.doneAt||t.closedAt||t.stoppedAt||(t.cleanup&&t.cleanup.completedAt))?hhmm(t.doneAt||t.closedAt||t.stoppedAt||(t.cleanup&&t.cleanup.completedAt)):'—')+'</b></span>'
       +'<span>资源 <b>'+(((t.cleanup&&t.cleanup.completedAt)?'已全部下线':((t.cleanup&&t.cleanup.why)?('撤投中 · '+t.cleanup.why):'待下线')))+'</b></span>'
-      +'<button class="kmini-toggle" type="button">展开数据 ▾</button></div>'):'';
+      +'<button class="kmini-toggle" type="button">'+(KB_BODY[t.id]?'收起数据 ▴':'展开数据 ▾')+'</button></div>'):'';
     card.innerHTML=
       '<div class="th"><div><a class="bv" href="https://www.bilibili.com/video/'+t.bvid+'" target="_blank" rel="noopener" title="打开 B 站播放页">'+t.bvid+'</a> <span class="tt">'+sjEsc(t.title||'')+'</span></div><div><span class="st '+cls+'">'+txt+'</span></div></div>'+
-      _miniMeta+('<div class="kbody" style="display:'+(_finished?'none':'block')+'">')+
+      _miniMeta+('<div class="kbody" style="display:'+((_finished&&!KB_BODY[t.id])?'none':'block')+'">')+
       '<div class="adv"><b>数据状态</b><span>'+((t.dataFresh)?'数据有效':'等待新数据')+' · 播放采样 '+(t.sampleAt?hhmm(t.sampleAt):'—')+' · 资源回读 '+(t.costAt?hhmm(t.costAt):'—')+'</span></div>'+
       '<div class="kpis">'+
         '<div class="k"><small>当前播放 / 目标 <span class="live-at" style="color:#039855"></span></small><b><span class="live-v">'+wan(t.v)+'</span><span style="font-size:13px;color:#98a2b3"> / '+t.target+'w</span></b></div>'+
@@ -1124,7 +1154,7 @@ function render(){
           '<span class="kfold-a">'+(foldOpen?'收起 ▴':'展开 ▾')+'</span>'+
         '</div>'+
         '<div class="kfold-body" style="display:'+(foldOpen?'block':'none')+'">'+
-      '<div class="chart"><div class="ct"><span>达成曲线 · 目标 '+t.target+'w · '+hhmm(+new Date(t.deadline))+' 截止 <span style="color:#98a2b3">（灰虚线=按需速率 · 橙虚线=当前30min速率预测）</span></span></div><div class="c1"></div></div>'+
+      '<div class="chart"><div class="ct"><span>达成曲线 · 目标 '+t.target+'w · '+hhmm(+new Date(t.deadline))+' 截止 <span style="color:#98a2b3">（灰实线=不投流自然生长 · 灰虚线=按需速率 · 橙虚线=分段预测：含夜间减速与预算拐点，画到过关为止）</span></span></div><div class="c1"></div></div>'+
       '<div class="grid2">'+
         '<div class="chart"><div class="ct"><span>每 5 分钟增量（虚线=达标所需）</span></div><div class="c2"></div></div>'+
         '<div class="chart"><div class="ct"><span>在看冲刺（目标 1000+）</span></div><div class="c3"></div></div>'+
@@ -1154,11 +1184,14 @@ function render(){
     (function(){
       var tg=card.querySelector('.kmini-toggle'), body=card.querySelector('.kbody');
       if(!tg||!body) return;
-      tg.addEventListener('click',function(){
-        var open=body.style.display==='none';
+      // 2026-11-19 修复：原来展开后调 render() 重绘，重绘把 _finished 卡片的 kbody 又设回 none，
+      // 等于点一下被自己撤销 → 表现为「点不动」。改为纯状态驱动，不重建 DOM。
+      tg.addEventListener('click',function(ev){
+        ev.preventDefault(); ev.stopPropagation();
+        var open=!KB_BODY[t.id];
+        KB_BODY[t.id]=open;
         body.style.display=open?'block':'none';
         tg.textContent=open?'收起数据 ▴':'展开数据 ▾';
-        if(open){ try{ render(); }catch(e){} }   // 展开后重绘一次，保证图表尺寸正确
       });
     })();
     (function(){
