@@ -179,7 +179,7 @@ td{padding:7px 6px;border-bottom:1px solid #f5f6f8}
 #paneKey .kmini-meta b{color:#475467;font-weight:600}
 #paneKey .kmini-toggle{border:0;background:none;color:#165DFF;font-size:11.5px;cursor:pointer;padding:0}@media(max-width:820px){#paneKey .kpis{grid-template-columns:1fr 1fr}#paneKey .grid2{grid-template-columns:1fr}}
 #paneKey .resgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-#paneKey .donemini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:10px;margin-top:2px}
+#paneKey .donemini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:10px;margin-top:2px;align-items:start}
 #paneKey .done-wrap{margin-top:8px;border-top:1px dashed #e4e7ec;padding-top:6px}
 #paneKey .done-head{display:flex;align-items:center;gap:10px;cursor:pointer;padding:7px 4px;border-radius:8px}
 #paneKey .done-head:hover{background:#fafbfc}
@@ -188,10 +188,16 @@ td{padding:7px 6px;border-bottom:1px solid #f5f6f8}
 #paneKey .done-a{color:#165DFF;font-size:11.5px;font-weight:600}
 #paneKey .bar select{padding:5px 10px;border-radius:99px;border:1px solid #d0d5dd;background:#fff;color:#344054;font-size:13px;font-weight:600;cursor:pointer;outline:none}
 #paneKey .donemini-grid .task.done-mini{margin-bottom:0}
-#paneKey .donemini-grid .task.done-mini.kopen{grid-column:1 / -1}
 #paneKey .donemini-grid .task.done-mini .th>div:first-child{min-width:0;flex:1}
 #paneKey .donemini-grid .task.done-mini .tt{max-width:100%}
 #paneKey .chart .tl{max-height:150px;overflow-y:auto;padding-right:4px}
+#paneKey .donemini-grid .grid2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+#paneKey .donemini-grid .sec{overflow-x:auto}
+#paneKey .donemini-grid .sec table{min-width:430px}
+#paneKey .donemini-grid .kpis{grid-template-columns:1fr 1fr}
+/* 达标卡的图表 viewBox 缩到 0.75 倍，9.5 的字实际只有 7px；这里抬到 11（CSS 覆盖 SVG 表现属性）→ 实际约 8.3px */
+#paneKey .donemini-grid .c1 svg text,#paneKey .donemini-grid .c2 svg text,#paneKey .donemini-grid .c3 svg text{font-size:11px}
+#paneKey .donemini-grid .plan-foot{font-size:11px}
 
 #paneKey .rescard{background:#fafbfc;border:1px solid #f0f2f5;border-radius:10px;padding:8px 10px;min-width:0}
 #paneKey .rescard .rh{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:12.5px;color:#344054}
@@ -960,8 +966,10 @@ function statusOf(t){
   return['无法达成','bad'];
 }
 function svgBox(w,h){const s=document.createElementNS(NS,'svg');s.setAttribute('viewBox','0 0 '+w+' '+h);s.setAttribute('width','100%');s.style.display='block';return s}
-function drawMain(t){
-  const W=1120,H=230,L=40,R=12,TP=14,B=26;
+function drawMain(t,narrow){
+  // narrow=true：卡片在达标区两列网格里（约 555px 宽）。viewBox 收到 680 让字号只缩到 ~8px，
+  // 否则沿用 1120 的 viewBox 会被压到 0.5 倍，刻度文字小到看不清。
+  const W=narrow?680:1120,H=narrow?206:230,L=narrow?46:40,R=narrow?10:12,TP=14,B=narrow?24:26;
   const T=+new Date(t.startAt), DL=+new Date(t.deadline), total=Math.max(1,(DL-T)/60000);
   // 2026-11-19：Y 轴上限还要容纳自然曲线与分段预测路径的终点，否则灰实线/橙线会画出图外
   const _npEnd=(t.pred&&t.pred.natPath&&t.pred.natPath.length)?t.pred.natPath[t.pred.natPath.length-1][1]:0;
@@ -1209,7 +1217,7 @@ function render(){
       '<div id="kMsg_'+t.id+'" style="font-size:11.5px;color:#98a2b3;margin-top:8px"></div>'+
       '';
     if(_finished){ _doneGrid.appendChild(card); } else { list.appendChild(card); }
-    card.querySelector('.c1').appendChild(drawMain(t));
+    card.querySelector('.c1').appendChild(drawMain(t,_finished));
     card.querySelector('.c2').appendChild(drawBar(t));
     // 2026-11-19 移除「在看冲刺」图：全项目没有任何地方写入 t.sprint（76 个历史任务全为空），
     // 该板块自上线起就只有「暂无冲刺数据」；且 all-in 规则下不再有冲刺动作。drawSprint 函数保留备用。
