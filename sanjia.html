@@ -959,6 +959,40 @@ function tx(p,x,y,s,a){const e=el(p,'text',Object.assign({x:x,y:y,'font-size':9.
 const hhmm=ms=>{const d=new Date(ms);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
 const wan=v=>v==null?'—':(v/10000).toFixed(2);
 const wan1=v=>v==null?'—':(v/10000).toFixed(1);   // 折点标注专用：3 字符才排得开
+// 预计达成时间的三态：
+//   已达成      → 显示实际达成时刻；若之前预测比实际早，注明「预测早 X 分」
+//   预测已过期  → 红色 + 「已过 X 分仍未达成」，明确告诉你这个预测偏早、已经不成立了
+//   正常       → 显示预测时刻
+function etaOf(t){
+  const now=Date.now(), p=t.pred, real=realDoneAt(t);
+  if(!p) return {t:'—',c:'#101828',note:''};
+  if(p.eta===-1 || (t.v!=null&&t.v>=t.target*10000)){
+    // 已达成
+    let txt = real?('已达成 '+hhmm(real)):'已达成';
+    let note='', c='#039855';
+    const fc=p.forecastEta;                       // 达成前最后一次预测（server 侧记录，可能为空）
+    if(fc&&real&&fc<real){
+      const late=Math.round((real-fc)/60000);
+      if(late>=5){ note='预测偏早 '+late+' 分'; c='#dc6803'; }
+    }
+    return {t:txt,c:c,note:note};
+  }
+  if(p.eta==null) return {t:'—',c:'#101828',note:'数据不足'};
+  if(p.eta<now){
+    const late=Math.round((now-p.eta)/60000);
+    return {t:hhmm(p.eta),c:'#d92d20',note:'已过 '+late+' 分仍未达成 · 预测偏早'};
+  }
+  if(p.eta>+new Date(t.deadline)){
+    return {t:hhmm(p.eta),c:'#d92d20',note:'晚于窗口截止'};
+  }
+  return {t:hhmm(p.eta),c:'#101828',note:''};
+}
+// 实际达成时刻：samples 里第一次播放 ≥ 目标的那个采样点
+function realDoneAt(t){
+  const s=t.samples||[], tg=t.target*10000;
+  for(let i=0;i<s.length;i++){ if(s[i]&&s[i].v>=tg) return s[i].t; }
+  return null;
+}
 function statusOf(t){
   if(t.status!=='running')return['已结束','idle'];
   if(t.v!=null&&t.v>=t.target*10000)return['已达成','ok'];
@@ -1192,6 +1226,7 @@ function render(){
     const [txt,cls]=t.status==='stopping'?['撤投确认中','wait']:statusOf(t);
     const ad=t.advice||{act:'none',text:'—'};
     const adColor=(ad.act==='done'||ad.act==='none')?'#98a2b3':(ad.act==='stop_story'?'#dc6803':'#d92d20');
+    const _eta=etaOf(t);
     const p=planOf(t);
     let res='';
     if(t.cards){
@@ -1235,7 +1270,7 @@ function render(){
       '<div class="kpis">'+
         '<div class="k"><small>当前播放 / 目标 <span class="live-at" style="color:#039855"></span></small><b><span class="live-v">'+wan(t.v)+'</span><span style="font-size:13px;color:#98a2b3"> / '+t.target+'w</span></b></div>'+
         '<div class="k"><small>近 5min 增量</small><b>'+(t.delta==null?'—':(t.delta>=0?'+':'')+wan(t.delta))+'w</b></div>'+
-        '<div class="k"><small title="按最近 30 分钟平均增速外推">预计达成时间（30min 速率）</small><b style="font-size:17px;color:'+(t.pred&&t.pred.eta>0&&t.pred.eta>+new Date(t.deadline)?'#d92d20':'#101828')+'">'+(t.pred?(t.pred.eta===-1?'已达成':(t.pred.eta==null?'—':hhmm(t.pred.eta))):'—')+'</b></div>'+
+        '<div class="k"><small title="按最近 30 分钟平均增速外推">预计达成时间（30min 速率）</small><b style="font-size:17px;color:'+_eta.c+'">'+_eta.t+'</b>'+(   _eta.note?('<div style="font-size:10px;color:'+_eta.c+';margin-top:1px;line-height:1.35">'+_eta.note+'</div>'):'')+'</div>'+
         '<div class="k"><small>预测终值·差 '+(t.pred&&t.pred.pred?wan(t.target*10000-t.pred.pred)+'w':'—')+'</small><b style="font-size:17px">'+(t.pred?wan(t.pred.pred)+'w':'—')+'</b></div>'+
       '</div>'+
       '<div class="adv" style="border-left-color:'+adColor+'"><b>当前建议</b><span style="color:'+adColor+'">'+sjEsc(ad.text)+'</span></div>'+
