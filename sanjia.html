@@ -336,9 +336,23 @@ function sjDupWrap(ks){ if(!ks||!ks.length) return ''; var h='<div class="sj-dup
 function renderSanjia(D){
   var box=document.getElementById('sanjia'); if(!box) return;
   var raw0=D&&D.sanjia;var arr=Array.isArray(raw0)?raw0.slice():(raw0?Object.keys(raw0).map(function(k){return raw0[k];}):[]);
-  var alerts=(D.alerts||[]).filter(function(a){return a.level==='bad'||a.level==='warn';}); if(!DEMO){ // 2026-11-19 修：刷新即清掉历史告警 —— 每次页面加载都把水位推到「现在」，只显示本次加载之后新产生的告警。
-    // 原实现从 localStorage 读旧水位，一旦存进过 0/NaN 就会把所有历史告警永久显示，表现为「刷新也不消失」。
-    if(window.__sjAlertBase===undefined){ var nwA=(typeof LIVE!=='undefined'&&LIVE&&LIVE.now)||Date.now(); window.__sjAlertBase=nwA; try{ localStorage.setItem('sj_alert_water',String(nwA)); }catch(eA2){} } alerts=alerts.filter(function(a){return Number(a.t)>window.__sjAlertBase;}); } alerts=alerts.slice(0,4);
+  var alerts=(D.alerts||[]).filter(function(a){return a.level==='bad'||a.level==='warn';}); if(!DEMO){ // 2026-11-19 修：告警「看过就不再出现」。
+    // 原实现从 localStorage 读旧水位，一旦存进过 0/NaN 就把所有历史告警永久显示，表现就是「刷新也不消失」。
+    // 现在按「稿件+类型+时间」当指纹：没看过的一次性展示，看过的刷新后不再重复；
+    // 已解决的告警服务端会自动撤销（submit_settled / approve_ok），不再靠页面掩盖。
+    try{
+      var _seen={};try{ _seen=JSON.parse(localStorage.getItem('sj_alert_seen')||'{}')||{}; }catch(eS0){ _seen={}; }
+      var _nowT=Date.now(),_keep={},_out=[];
+      (alerts||[]).forEach(function(a){
+        var k=String(a.bvid||'')+'|'+String(a.tag||'')+'|'+String(a.t||'');
+        if(_keep[k])return;
+        if(_seen[k]){_keep[k]=_seen[k];return;}
+        _keep[k]=_nowT;_out.push(a);
+      });
+      Object.keys(_seen).forEach(function(k){ if(!_keep[k]&&_nowT-Number(_seen[k]||0)<7*86400000)_keep[k]=_seen[k]; });
+      try{ localStorage.setItem('sj_alert_seen',JSON.stringify(_keep)); }catch(eS1){}
+      alerts=_out;
+    }catch(eS2){ alerts=alerts.filter(function(a){return Date.now()-Number(a.t||0)<24*3600000;}); } } alerts=alerts.slice(0,4);
   var head='<div class="sj-head"><div class="t"><h2>三家稿件</h2><small id="sj_sum"></small></div>'
     +'<div style="display:flex;gap:8px;align-items:center">'
     +'<button class="sj-btn" onclick="sjOpenForm()">＋ 登记三家稿件</button></div></div>';
