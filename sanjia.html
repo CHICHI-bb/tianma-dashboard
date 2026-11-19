@@ -180,6 +180,13 @@ td{padding:7px 6px;border-bottom:1px solid #f5f6f8}
 #paneKey .kmini-toggle{border:0;background:none;color:#165DFF;font-size:11.5px;cursor:pointer;padding:0}@media(max-width:820px){#paneKey .kpis{grid-template-columns:1fr 1fr}#paneKey .grid2{grid-template-columns:1fr}}
 #paneKey .resgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 #paneKey .donemini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:10px;margin-top:2px}
+#paneKey .done-wrap{margin-top:8px;border-top:1px dashed #e4e7ec;padding-top:6px}
+#paneKey .done-head{display:flex;align-items:center;gap:10px;cursor:pointer;padding:7px 4px;border-radius:8px}
+#paneKey .done-head:hover{background:#fafbfc}
+#paneKey .done-t{font-weight:700;font-size:13px;color:#475467}
+#paneKey .done-s{color:#98a2b3;font-size:11.5px;flex:1}
+#paneKey .done-a{color:#165DFF;font-size:11.5px;font-weight:600}
+#paneKey .bar select{padding:5px 10px;border-radius:99px;border:1px solid #d0d5dd;background:#fff;color:#344054;font-size:13px;font-weight:600;cursor:pointer;outline:none}
 #paneKey .donemini-grid .task.done-mini{margin-bottom:0}
 #paneKey .donemini-grid .task.done-mini.kopen{grid-column:1 / -1}
 #paneKey .donemini-grid .task.done-mini .th>div:first-child{min-width:0;flex:1}
@@ -1105,6 +1112,7 @@ function timeline(t){
 }
 var KB_FOLD={};   // 重点tab：长分析折叠状态，按 task.id 记住，重渲染不丢
  var KB_BODY={};   // 重点tab：已达标小卡「展开数据」状态，按 task.id 记住，重渲染不丢
+ var KB_DONE_OPEN=false;   // 重点tab：已达标分组（飘灰区）是否展开，默认收起
 
 function render(){
   const D=pickKeyData();
@@ -1233,7 +1241,27 @@ function render(){
       head.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } });
     })();
   });
-  if(_doneGrid.children.length) list.appendChild(_doneGrid);
+  if(_doneGrid.children.length){
+    var _wrap=document.createElement('div'); _wrap.className='done-wrap';
+    var _head=document.createElement('div'); _head.className='done-head';
+    _head.setAttribute('role','button'); _head.setAttribute('tabindex','0');
+    _head.setAttribute('aria-expanded',KB_DONE_OPEN?'true':'false');
+    _head.innerHTML='<span class="done-t">已达标 · '+_doneGrid.children.length+' 篇</span>'
+      +'<span class="done-s">数据全部保留 · 点开看明细与曲线</span>'
+      +'<span class="done-a">'+(KB_DONE_OPEN?'收起 ▴':'展开 ▾')+'</span>';
+    _doneGrid.style.display=KB_DONE_OPEN?'grid':'none';
+    _wrap.appendChild(_head); _wrap.appendChild(_doneGrid);
+    list.appendChild(_wrap);
+    var _dtog=function(){
+      KB_DONE_OPEN=!KB_DONE_OPEN;
+      _doneGrid.style.display=KB_DONE_OPEN?'grid':'none';
+      _head.setAttribute('aria-expanded',KB_DONE_OPEN?'true':'false');
+      var _a=_head.querySelector('.done-a'); if(_a)_a.textContent=KB_DONE_OPEN?'收起 ▴':'展开 ▾';
+    };
+    _head.addEventListener('click',_dtog);
+    _head.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); _dtog(); } });
+  }
+  fillMonthOptions(tasks);
   kbCount(tasks.filter(function(t){return t.status==='running';}).length);
   if(!tasks.length){ var ls=document.getElementById('kList'); if(ls) ls.innerHTML='<div class="empty" style="padding:32px;text-align:center">暂无重点稿件任务 · 点上方『＋ 新建任务』登记'+sgBtn()+'</div>'; return; }
   document.getElementById('kFoot').textContent='数据由本机采集端发布 · 最近更新 '+(D.publishedAt?new Date(D.publishedAt).toLocaleString('zh-CN'):'—');
@@ -1362,26 +1390,56 @@ document.addEventListener('click',function(e){
     var bar=document.getElementById('kBar2'); if(!bar)return;
     bar.innerHTML='<span class="pill" style="background:#eff4ff;color:#165DFF;border-color:#b2ccff"><b>操作走本机执行端</b> · 提交后自动刷新本页，无需离开</span>'
       +'<button onclick="KB.openForm()" style="padding:5px 14px;border-radius:99px;border:0;background:#165DFF;color:#fff;font-size:13px;font-weight:600;cursor:pointer">＋ 新建任务</button>'
-      +'<button onclick="KB.exportBv()" title="导出重点 tab 全部 BV（一行一个，同时复制到剪贴板）" style="padding:5px 14px;border-radius:99px;border:1px solid #d0d5dd;background:#fff;color:#344054;font-size:13px;font-weight:600;cursor:pointer">导出 BV</button>'
+      +'<select id="kBvMonth" title="按稿件发布时间筛选导出范围"><option value="">全部月份</option></select>'
+      +'<button onclick="KB.exportBv()" title="按上方所选月份导出 BV（一行一个，同时复制到剪贴板）" style="padding:5px 14px;border-radius:99px;border:1px solid #d0d5dd;background:#fff;color:#344054;font-size:13px;font-weight:600;cursor:pointer">导出 BV</button>'
       +'<a href="'+API+'/do?act=ping&back='+encodeURIComponent(BACK)+'" style="padding:5px 12px;border-radius:99px;border:1px solid #e4e7ec;background:#fff;font-size:12.5px;color:#667085;text-decoration:none">检测本机</a>';
   })();
 
-// 2026-11-18：导出重点 tab 全部 BV（一行一个，同时写剪贴板）
+// 2026-11-19：按「稿件发布时间」取月份（pubAt 来自 B 站 view 接口的 pubdate，就是稿件页显示的发布时间）
+function monthOf(t){
+  var p=t&&t.pubAt; if(!p) return '';
+  var d=new Date(p); if(isNaN(d.getTime())) return '';
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+// 工具栏月份下拉：选项来自当前任务池，保留已选值，重渲染不丢
+function fillMonthOptions(tasks){
+  var sel=document.getElementById('kBvMonth'); if(!sel) return;
+  var cur=sel.value||'';
+  var cnt={}, order=[];
+  (tasks||[]).forEach(function(t){
+    var m=monthOf(t); if(!m) return;
+    if(cnt[m]==null){ cnt[m]=0; order.push(m); }
+    cnt[m]++;
+  });
+  order.sort().reverse();
+  var html='<option value="">全部月份</option>';
+  order.forEach(function(m){ html+='<option value="'+m+'">'+m+'（'+cnt[m]+' 篇）</option>'; });
+  sel.innerHTML=html;
+  if(cur&&cnt[cur]!=null) sel.value=cur;
+}
+// 2026-11-18：导出重点 tab BV（一行一个，同时写剪贴板）；2026-11-19 增加按月份筛选
 function exportBv(){
   var D=pickKeyData(); var tasks=(D&&D.tasks)||[];
+  var sel=document.getElementById('kBvMonth'); var mon=sel?sel.value:'';
+  var all=tasks;
+  if(mon){
+    tasks=tasks.filter(function(t){ return monthOf(t)===mon; });
+    if(!tasks.length){ kbMsg(mon+' 没有稿件（发布时间口径）',true); return; }
+  }
   var seen={}, list=[];
   tasks.forEach(function(t){ if(t&&/^BV[0-9A-Za-z]{8,12}$/.test(String(t.bvid||''))&&!seen[t.bvid]){ seen[t.bvid]=1; list.push(t.bvid); } });
   if(!list.length){ kbMsg('没有可导出的 BV',true); return; }
   var text=list.join('\n');
   try{ if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(function(){}); }catch(e){}
   var d=new Date(), p2=function(n){return String(n).padStart(2,'0');};
-  var name='重点稿件BV-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'-'+p2(d.getHours())+p2(d.getMinutes())+'.txt';
+  var name='重点稿件BV'+(mon?('-'+mon):'')+'-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'-'+p2(d.getHours())+p2(d.getMinutes())+'.txt';
   try{
     var blob=new Blob([text],{type:'text/plain;charset=utf-8'});
     var url=URL.createObjectURL(blob);
     var a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click();
     setTimeout(function(){ try{ URL.revokeObjectURL(url); a.remove(); }catch(e){} },1500);
-    kbMsg('已导出 '+list.length+' 个 BV（已同时复制到剪贴板）',false);
+    var _doneN=tasks.filter(function(t){return !(t.status==='running'||t.status==='stopping');}).length;
+    kbMsg('已导出 '+list.length+' 个 BV（其中已达标 '+_doneN+' 篇）'+(mon?(' · 范围 '+mon):' · 范围 全部月份')+'（已同时复制到剪贴板）',false);
   }catch(e){ kbMsg('下载失败：'+(e&&e.message||e)+'（BV 已复制到剪贴板）',true); }
 }
 window.KB={
