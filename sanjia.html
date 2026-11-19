@@ -179,6 +179,13 @@ td{padding:7px 6px;border-bottom:1px solid #f5f6f8}
 #paneKey .kmini-meta b{color:#475467;font-weight:600}
 #paneKey .kmini-toggle{border:0;background:none;color:#165DFF;font-size:11.5px;cursor:pointer;padding:0}@media(max-width:820px){#paneKey .kpis{grid-template-columns:1fr 1fr}#paneKey .grid2{grid-template-columns:1fr}}
 #paneKey .resgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#paneKey .donemini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:10px;margin-top:2px}
+#paneKey .donemini-grid .task.done-mini{margin-bottom:0}
+#paneKey .donemini-grid .task.done-mini.kopen{grid-column:1 / -1}
+#paneKey .donemini-grid .task.done-mini .th>div:first-child{min-width:0;flex:1}
+#paneKey .donemini-grid .task.done-mini .tt{max-width:100%}
+#paneKey .chart .tl{max-height:150px;overflow-y:auto;padding-right:4px}
+
 #paneKey .rescard{background:#fafbfc;border:1px solid #f0f2f5;border-radius:10px;padding:8px 10px;min-width:0}
 #paneKey .rescard .rh{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:12.5px;color:#344054}
 #paneKey .rescard .rh b{font-weight:700}
@@ -207,7 +214,7 @@ td{padding:7px 6px;border-bottom:1px solid #f5f6f8}
 </section>
 <section id="paneKey" style="display:none">
   <h1>重点稿件 · 自动投放</h1>
-  <p class="lead">目标驱动：达成曲线 · 在看冲刺 · 增量节奏 · 拆解方案 · 资源消耗 · 事件时间线。实时数据与三家 tab 共用本机采集端（每 20 秒刷新）。</p>
+  <p class="lead">目标驱动：达成曲线（含不投流自然生长对照）· 增量节奏 · 资源消耗 · 生效资源 · 事件时间线。实时数据与三家 tab 共用本机采集端（每 20 秒刷新）。</p>
   <div class="bar" id="kBar2" style="margin-bottom:10px"></div>
   <div class="bar" id="kBar"></div>
 <div id="kDemoBar" style="display:none;margin:0 0 14px;background:#fffaf0;border:1px solid #f5d78e;border-radius:10px;padding:10px 14px;font-size:12.5px"></div>
@@ -329,7 +336,9 @@ function sjDupWrap(ks){ if(!ks||!ks.length) return ''; var h='<div class="sj-dup
 function renderSanjia(D){
   var box=document.getElementById('sanjia'); if(!box) return;
   var raw0=D&&D.sanjia;var arr=Array.isArray(raw0)?raw0.slice():(raw0?Object.keys(raw0).map(function(k){return raw0[k];}):[]);
-  var alerts=(D.alerts||[]).filter(function(a){return a.level==='bad'||a.level==='warn';}); if(!DEMO){ if(window.__sjAlertBase===undefined){ var nwA=(typeof LIVE!=='undefined'&&LIVE&&LIVE.now)||Date.now(); var oldA=null; try{ oldA=localStorage.getItem('sj_alert_water'); }catch(eA){} window.__sjAlertBase=(oldA===null||oldA==='')?nwA:(Number(oldA)||0); try{ localStorage.setItem('sj_alert_water',String(nwA)); }catch(eA2){} } alerts=alerts.filter(function(a){return Number(a.t)>window.__sjAlertBase;}); } alerts=alerts.slice(0,4);
+  var alerts=(D.alerts||[]).filter(function(a){return a.level==='bad'||a.level==='warn';}); if(!DEMO){ // 2026-11-19 修：刷新即清掉历史告警 —— 每次页面加载都把水位推到「现在」，只显示本次加载之后新产生的告警。
+    // 原实现从 localStorage 读旧水位，一旦存进过 0/NaN 就会把所有历史告警永久显示，表现为「刷新也不消失」。
+    if(window.__sjAlertBase===undefined){ var nwA=(typeof LIVE!=='undefined'&&LIVE&&LIVE.now)||Date.now(); window.__sjAlertBase=nwA; try{ localStorage.setItem('sj_alert_water',String(nwA)); }catch(eA2){} } alerts=alerts.filter(function(a){return Number(a.t)>window.__sjAlertBase;}); } alerts=alerts.slice(0,4);
   var head='<div class="sj-head"><div class="t"><h2>三家稿件</h2><small id="sj_sum"></small></div>'
     +'<div style="display:flex;gap:8px;align-items:center">'
     +'<button class="sj-btn" onclick="sjOpenForm()">＋ 登记三家稿件</button></div></div>';
@@ -1091,6 +1100,7 @@ function render(){
     '<span class="pill" style="color:#98a2b3">'+(KB_LIVE&&KB_LIVE.live?'通道已连接 · 采样时间见稿件卡':'站点快照 · 每 60 秒同步')+'</span>';
   const list=document.getElementById('kList');
   list.innerHTML='';
+  var _doneGrid=document.createElement('div'); _doneGrid.className='donemini-grid';
   // 2026-11-18：目标达成的卡片飘灰置底、缩成小卡（数据全部保留，展开还能看）
   const _active=tasks.filter(function(t){return t.status==='running'||t.status==='stopping';});
   const _done=tasks.filter(function(t){return !(t.status==='running'||t.status==='stopping');});
@@ -1130,7 +1140,7 @@ function render(){
     const foldOpen=!!KB_FOLD[t.id];
     const bgl=SJ_MGR+'tianma/position?card_classify=1&resource_type=1&resource_oid='+encodeURIComponent(t.bvid);
 
-    const card=document.createElement('div'); card.className='task'+(_finished?' done-mini':''); card.setAttribute('data-bvid',t.bvid);
+    const card=document.createElement('div'); card.className='task'+(_finished?' done-mini':'')+(_finished&&KB_BODY[t.id]?' kopen':''); card.setAttribute('data-bvid',t.bvid);
     const _miniMeta=_finished?('<div class="kmini-meta"><span>最终播放 <b>'+wan(t.v)+'w</b> / 目标 '+t.target+'w</span>'
       +'<span>实耗 <b>'+wan((Number(t.tianmaSpent)||0)+(Number(t.storySpent)||0))+'w</b></span>'
       +'<span>结算 <b>'+((t.doneAt||t.closedAt||t.stoppedAt||(t.cleanup&&t.cleanup.completedAt))?hhmm(t.doneAt||t.closedAt||t.stoppedAt||(t.cleanup&&t.cleanup.completedAt)):'—')+'</b></span>'
@@ -1150,21 +1160,20 @@ function render(){
       '<div class="kfold">'+
         '<div class="kfold-head" role="button" tabindex="0" aria-expanded="'+(foldOpen?'true':'false')+'">'+
           '<span class="kfold-t">长分析</span>'+
-          '<span class="kfold-s">达成曲线 · 每 5 分钟增量 · 在看冲刺 · 实时消耗（按窗口粒度） · 生效资源 · 事件时间线</span>'+
+          '<span class="kfold-s">达成曲线（灰实线=不投流自然生长）· 每 5 分钟增量 · 事件时间线 · 实时消耗（按窗口粒度） · 生效资源</span>'+
           '<span class="kfold-a">'+(foldOpen?'收起 ▴':'展开 ▾')+'</span>'+
         '</div>'+
         '<div class="kfold-body" style="display:'+(foldOpen?'block':'none')+'">'+
       '<div class="chart"><div class="ct"><span>达成曲线 · 目标 '+t.target+'w · '+hhmm(+new Date(t.deadline))+' 截止 <span style="color:#98a2b3">（灰实线=不投流自然生长 · 灰虚线=按需速率 · 橙虚线=分段预测：含夜间减速与预算拐点，画到过关为止）</span></span></div><div class="c1"></div></div>'+
       '<div class="grid2">'+
         '<div class="chart"><div class="ct"><span>每 5 分钟增量（虚线=达标所需）</span></div><div class="c2"></div></div>'+
-        '<div class="chart"><div class="ct"><span>在看冲刺（目标 1000+）</span></div><div class="c3"></div></div>'+
+        '<div class="chart"><div class="ct"><span>事件时间线</span></div><ul class="tl">'+tl+'</ul></div>'+
       '</div>'+
       '<div class="sec"><h4>实时消耗 · 后台回读 · '+((t.costBucket===10)?'每 10 分钟一行（2h 内目标）':'每小时一行')+'</h4>'+ costBlockHTML(t) +
       '</div>'+
             '<div class="sec"><h4>生效资源 · 单位 w 曝光 · 一行两张</h4>'+
         '<div class="resgrid">'+(res||'<div style="color:#98a2b3;font-size:12px">暂无卡片数据</div>')+'</div>'+
       '</div>'+
-      '<div class="sec"><h4>事件时间线</h4><ul class="tl">'+tl+'</ul></div>'+
         '</div>'+
       '</div>'+
       '<div class="acts">'+
@@ -1177,10 +1186,11 @@ function render(){
       '</div>'+   // <div class="kbody">
       '<div id="kMsg_'+t.id+'" style="font-size:11.5px;color:#98a2b3;margin-top:8px"></div>'+
       '';
-    list.appendChild(card);
+    if(_finished){ _doneGrid.appendChild(card); } else { list.appendChild(card); }
     card.querySelector('.c1').appendChild(drawMain(t));
     card.querySelector('.c2').appendChild(drawBar(t));
-    card.querySelector('.c3').appendChild(drawSprint(t));
+    // 2026-11-19 移除「在看冲刺」图：全项目没有任何地方写入 t.sprint（76 个历史任务全为空），
+    // 该板块自上线起就只有「暂无冲刺数据」；且 all-in 规则下不再有冲刺动作。drawSprint 函数保留备用。
     (function(){
       var tg=card.querySelector('.kmini-toggle'), body=card.querySelector('.kbody');
       if(!tg||!body) return;
@@ -1191,6 +1201,7 @@ function render(){
         var open=!KB_BODY[t.id];
         KB_BODY[t.id]=open;
         body.style.display=open?'block':'none';
+        card.classList.toggle('kopen',open);
         tg.textContent=open?'收起数据 ▴':'展开数据 ▾';
       });
     })();
@@ -1208,6 +1219,7 @@ function render(){
       head.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } });
     })();
   });
+  if(_doneGrid.children.length) list.appendChild(_doneGrid);
   kbCount(tasks.filter(function(t){return t.status==='running';}).length);
   if(!tasks.length){ var ls=document.getElementById('kList'); if(ls) ls.innerHTML='<div class="empty" style="padding:32px;text-align:center">暂无重点稿件任务 · 点上方『＋ 新建任务』登记'+sgBtn()+'</div>'; return; }
   document.getElementById('kFoot').textContent='数据由本机采集端发布 · 最近更新 '+(D.publishedAt?new Date(D.publishedAt).toLocaleString('zh-CN'):'—');
