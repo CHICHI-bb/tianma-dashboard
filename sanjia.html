@@ -28,7 +28,8 @@ a.bv:focus-visible{outline:2px solid #165DFF;outline-offset:2px;border-radius:3p
 .adv{border-left:4px solid #98a2b3;background:#fafbfc;border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:13px}
 .adv b{font-size:11.5px;color:var(--sub);display:block;font-weight:700;letter-spacing:.3px}
 .chart{background:#fafbfc;border:1px solid #f0f2f5;border-radius:10px;padding:10px 8px 4px;margin-bottom:12px}
-.chart .ct{font-size:11.5px;color:var(--sub);margin:0 0 4px 6px;display:flex;justify-content:space-between}
+.chart .ct{font-size:11.5px;color:var(--sub);margin:0 0 4px 6px;display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap}
+.chart .ct .ct-kpi{display:flex;gap:8px;flex-wrap:wrap;font-family:Consolas,monospace;font-size:11px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 table{width:100%;border-collapse:collapse;font-size:12.5px}
 th{text-align:left;color:#98a2b3;font-weight:600;font-size:11px;padding:6px;border-bottom:1px solid var(--line)}
@@ -957,6 +958,7 @@ function el(p,t,a){const e=document.createElementNS(NS,t);for(const k in a)e.set
 function tx(p,x,y,s,a){const e=el(p,'text',Object.assign({x:x,y:y,'font-size':9.5,fill:'#98a2b3','font-family':'Consolas,monospace'},a||{}));e.textContent=s;return e}
 const hhmm=ms=>{const d=new Date(ms);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
 const wan=v=>v==null?'—':(v/10000).toFixed(2);
+const wan1=v=>v==null?'—':(v/10000).toFixed(1);   // 折点标注专用：3 字符才排得开
 function statusOf(t){
   if(t.status!=='running')return['已结束','idle'];
   if(t.v!=null&&t.v>=t.target*10000)return['已达成','ok'];
@@ -966,6 +968,26 @@ function statusOf(t){
   return['无法达成','bad'];
 }
 function svgBox(w,h){const s=document.createElementNS(NS,'svg');s.setAttribute('viewBox','0 0 '+w+' '+h);s.setAttribute('width','100%');s.style.display='block';return s}
+// 2026-11-19：原来「不投流 ≈ Xw」「按需 +X 播放/分」「预测 Xw」三个标签都贴在曲线右上角，
+    // 已过关时蓝线末端 / 目标线 / 预测值全收敛到同一高度，标签必然叠成一团。
+    // 改成统一放到标题行右侧，SVG 里只留折点数字，图面立刻干净。
+function chartKpi(t){
+  const p=t.pred||{}; const bits=[];
+  if(p.natPath&&p.natPath.length){
+    const nv=p.natPath[p.natPath.length-1][1];
+    bits.push('<span style="color:#8a94a6">不投流 ≈ '+wan(nv)+'w'+((p.natConf&&p.natConf!=='高')?('（'+p.natConf+'）'):'')+'</span>');
+  }
+  if(p.crossedBefore){
+    const over=(t.v||0)-t.target*10000;
+    bits.push('<span style="color:'+(over>=0?'#039855':'#d92d20')+'">'+(over>=0?('已超额 '+wan(over)+'w'):('缺口 '+wan(-over)+'w'))+'</span>');
+  }else if(p.crossedAt){
+    bits.push('<span style="color:#dc6803">预计 '+hhmm(p.crossedAt)+' 过关</span>');
+  }else if(p.pred){
+    bits.push('<span style="color:#d92d20">预测 '+wan(p.pred)+'w · 缺口 '+wan(Math.max(0,t.target*10000-p.pred))+'w</span>');
+  }
+  if(!bits.length)return '';
+  return '<span class="ct-kpi">'+bits.join('<span style="color:#e4e7ec">|</span>')+'</span>';
+}
 function drawMain(t,narrow){
   // narrow=true：卡片在达标区两列网格里（约 555px 宽）。viewBox 收到 680 让字号只缩到 ~8px，
   // 否则沿用 1120 的 viewBox 会被压到 0.5 倍，刻度文字小到看不清。
@@ -980,6 +1002,7 @@ function drawMain(t,narrow){
   for(let i=0;i<=4;i++){const v=dmax*i/4;el(svg,'line',{x1:L,y1:Y(v),x2:W-R,y2:Y(v),stroke:'#f0f2f5'});tx(svg,L-6,Y(v)+3,wan(v),{'text-anchor':'end'})}
   for(let i=0;i<=4;i++){const mn=total*i/4;tx(svg,X(mn),H-9,hhmm(T+mn*60000),{'text-anchor':'middle'})}
   const v0=t.samples.length?t.samples[0].v:0;
+  let _needLabY=null;   // 按需标签的 y，预测标签要避让它（目标附近两者会叠在一起）
   // 2026-11-18：灰线原来是从开投点直线连到目标值（同目标同窗口的稿件完全一致，没用到数据）。
   // 改成「按需达标线」：从当前播放点出发、按“剩余时间刚好到目标”的斜率画，每篇稿件都不同；
   // 橙色虚线仍是按最近 30 分钟平均速率外推的预测线，灰橙一对比就看得出还要提速多少。
@@ -994,8 +1017,8 @@ function drawMain(t,narrow){
       opacity:(_cf==='高'?.9:(_cf==='中'?.55:.35))};
     if(_cf!=='高') _at['stroke-dasharray']=(_cf==='中'?'6 3':'2 3');
     el(svg,'polyline',_at);
-    const _ne=_np[_np.length-1];
-    tx(svg,X(_ne[0])-2,Y(_ne[1])+13,'不投流 ≈ '+wan(_ne[1])+'w'+(_cf==='高'?'':'（'+_cf+'置信）'),{'text-anchor':'end',fill:'#8a94a6','font-size':10});
+    // 灰实线只补标首点和中点，终点已有「不投流 ≈ Xw」；标多了会和蓝线的折点数字挤在一起
+    // 灰实线不再标中间数值：会和蓝线的折点数字压在一起，且终点值已显示在标题行 KPI
   }
   if(lastS){
     const lp0=[(lastS.t-T)/60000,lastS.v];
@@ -1005,13 +1028,49 @@ function drawMain(t,narrow){
     const _gap=(lp0[1]-t.target*10000);
     const _lab = needRate>=0 ? ('按需 +'+Math.round(needRate)+' 播放/分 → 目标 '+t.target+'w')
                              : ('已超额 '+(Math.round(_gap/1000)/10)+'w · 可降速 → 目标 '+t.target+'w');
-    tx(svg,X(total)-2,Y(t.target*10000)-7,_lab,{'text-anchor':'end',fill:'#8a94a6','font-size':10.5});
+    _needLabY=Y(t.target*10000)-7;   // 只记录落点供下方避让用，文字已挪到标题行
+    void _lab;
   }
   const pts=t.samples.map(s=>[(s.t-T)/60000,s.v]);
   if(pts.length>1){
     el(svg,'polygon',{points:[[X(0),Y(v0)]].concat(pts.map(p=>[X(p[0]),Y(p[1])])).concat([[X(pts[pts.length-1][0]),Y(0)],[X(0),Y(0)]]).map(p=>p[0]+','+p[1]).join(' '),fill:'#165DFF',opacity:.06});
     el(svg,'polyline',{points:pts.map(p=>X(p[0])+','+Y(p[1])).join(' '),fill:'none',stroke:'#165DFF','stroke-width':2.2,'stroke-linejoin':'round'});
-    pts.forEach(p=>el(svg,'circle',{cx:X(p[0]),cy:Y(p[1]),r:1.8,fill:'#165DFF'}));
+    // 每个折点的圆点都挂一个 <title>：静态标签塞不下时，鼠标悬停依然能看到该点的精确时刻与播放量
+    pts.forEach(function(p){
+      const ci=el(svg,'circle',{cx:X(p[0]),cy:Y(p[1]),r:1.8,fill:'#165DFF'});
+      const ti=document.createElementNS(NS,'title');
+      ti.textContent=hhmm(T+p[0]*60000)+' · '+wan(p[1])+'w';
+      ci.appendChild(ti);
+    });
+    // 2026-11-19：每个折点标具体播放量。5 分钟一个采样点时标签会互相压住，
+    // 按「标签宽 / 点间距」自动抽稀；首点和当前点强制保留，中间均匀取。
+    const _labW=narrow?19:21;   // 按字号 10 的 3 字符数字实测宽度留余量，估小了会漏过滤
+    const _gapPx=(W-L-R)/Math.max(1,pts.length-1);
+    // 优先级：全标 → 间距不够就奇数上/偶数下交错 → 还挤不下才抽稀。目标是尽量每个折点都有数。
+    let _stagger=false,_step=1;
+    if(_gapPx<_labW){
+      _stagger=true;
+      if(_gapPx*2<_labW)_step=Math.max(1,Math.ceil(_labW/(_gapPx*2)));
+    }
+    const _mark=[];
+    for(let i=pts.length-1;i>=0;i-=_step)_mark.push(i);
+    if(_mark[_mark.length-1]!==0)_mark.push(0);
+    // 采样点间距并不均匀（网络抖动时会有挨得很近的点），同侧再挤一次就会压字，
+    // 所以最后按「同侧 + 水平距离 < 标签宽」再滤一道，宁可少标一个也不叠。
+    // 只按水平距离滤不够：曲线平缓时相邻两点的 y 差会小于字高，照样压字。
+    // 改成二维包围盒检测，任何方向挤到一起就跳过这个点。
+    const _taken=[];
+    _mark.forEach(function(i){
+      const p=pts[i];
+      if(Y(p[1])>H-B-16) return;   // 贴底的折点（数值接近 0）不标，否则会和横轴时间刻度压在一起
+      const up=(_stagger?(i%2===0):true), lx=X(p[0]);
+      if(lx-_labW/2<L||lx+_labW/2>W-R) return;   // 太靠边会压到 Y 轴刻度/右边界，跳过
+      const ty=Y(p[1])+(up?-(narrow?8:7):(narrow?13:12));
+      const box={x1:lx-_labW/2,x2:lx+_labW/2,y1:ty-6,y2:ty+6};
+      if(_taken.some(function(o){ return box.x1<o.x2&&box.x2>o.x1&&box.y1<o.y2&&box.y2>o.y1; })) return;
+      _taken.push(box);
+      tx(svg,lx,ty,wan1(p[1]),{'text-anchor':'middle',fill:'#165DFF','font-size':(narrow?10:9.5),'font-weight':'600'});
+    });
   }
   if(t.pred&&t.pred.path&&t.pred.path.length>1&&pts.length){
     // 2026-11-19：过关前的橙线改为分段推演——资源在线期按 30min 速率×夜间系数推进，
@@ -1020,17 +1079,10 @@ function drawMain(t,narrow){
     el(svg,'polyline',{points:_pp.map(p=>X(p[0])+','+Y(p[1])).join(' '),fill:'none',stroke:'#dc6803','stroke-width':2,'stroke-dasharray':'4 4','stroke-linejoin':'round'});
     const _pe=_pp[_pp.length-1];
     el(svg,'circle',{cx:X(_pe[0]),cy:Y(_pe[1]),r:3.5,fill:'#fff',stroke:'#dc6803','stroke-width':2});
-    if(t.pred.crossedAt){
-      tx(svg,X(_pe[0])-4,Y(_pe[1])-8,'预计 '+hhmm(t.pred.crossedAt)+' 过关',{'text-anchor':'end',fill:'#dc6803','font-size':10.5});
-    }else if(t.pred.pred){
-      const _gap=Math.max(0,t.target*10000-t.pred.pred);
-      tx(svg,X(_pe[0])-4,Y(_pe[1])-8,'预测 '+wan(t.pred.pred)+'w · 缺口 '+wan(_gap)+'w',{'text-anchor':'end',fill:'#d92d20','font-size':10.5});
-    }
   } else if(t.pred&&pts.length){
     const lp=pts[pts.length-1];
     el(svg,'line',{x1:X(lp[0]),y1:Y(lp[1]),x2:X(total),y2:Y(t.pred.pred),stroke:'#dc6803','stroke-width':1.8,'stroke-dasharray':'4 4'});
     el(svg,'circle',{cx:X(total),cy:Y(t.pred.pred),r:3.5,fill:'#fff',stroke:'#dc6803','stroke-width':2});
-    tx(svg,X(total)-2,Y(t.pred.pred)+14,'预测 '+wan(t.pred.pred)+'w',{'text-anchor':'end',fill:'#dc6803','font-size':10.5});
     el(svg,'rect',{x:X(lp[0]),y:Y(Math.min(t.pred.pred,t.target*10000)),width:Math.max(0,X(total)-X(lp[0])),height:Math.abs(Y(t.target*10000)-Y(t.pred.pred)),fill:'#dc6803',opacity:.06});
   }
   return svg;
@@ -1194,7 +1246,7 @@ function render(){
           '<span class="kfold-a">'+(foldOpen?'收起 ▴':'展开 ▾')+'</span>'+
         '</div>'+
         '<div class="kfold-body" style="display:'+(foldOpen?'block':'none')+'">'+
-      '<div class="chart"><div class="ct"><span>达成曲线 · 目标 '+t.target+'w · '+hhmm(+new Date(t.deadline))+' 截止 <span style="color:#98a2b3">（灰实线=不投流自然生长 · 灰虚线=按需速率 · 橙虚线=分段预测：含夜间减速与预算拐点，画到过关为止）</span></span></div><div class="c1"></div></div>'+
+      '<div class="chart"><div class="ct"><span>达成曲线 · 目标 '+t.target+'w · '+hhmm(+new Date(t.deadline))+' 截止 <span style="color:#98a2b3">（灰实线=不投流自然生长 · 灰虚线=按需速率 · 橙虚线=分段预测）</span></span>'+chartKpi(t)+'</div><div class="c1"></div></div>'+
       '<div class="grid2">'+
         '<div class="chart"><div class="ct"><span>每 5 分钟增量（虚线=达标所需）</span></div><div class="c2"></div></div>'+
         '<div class="chart"><div class="ct"><span>事件时间线</span></div><ul class="tl">'+tl+'</ul></div>'+
