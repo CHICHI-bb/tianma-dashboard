@@ -25,7 +25,8 @@ a.bv:focus-visible{outline:2px solid #165DFF;outline-offset:2px;border-radius:3p
 .k{background:#fafbfc;border:1px solid #f0f2f5;border-radius:10px;padding:10px 12px}
 .k small{display:block;color:var(--sub);font-size:11.5px}
 .k b{display:block;font-size:21px;font-weight:700;margin-top:3px}
-.adv{border-left:4px solid #98a2b3;background:#fafbfc;border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:13px}
+.adv{border-left:4px solid #98a2b3;background:#fafbfc;border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.adv>b{flex:0 0 auto}
 .adv b{font-size:11.5px;color:var(--sub);display:block;font-weight:700;letter-spacing:.3px}
 .chart{background:#fafbfc;border:1px solid #f0f2f5;border-radius:10px;padding:10px 8px 4px;margin-bottom:12px}
 .chart .ct{font-size:11.5px;color:var(--sub);margin:0 0 4px 6px;display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap}
@@ -1227,6 +1228,20 @@ function render(){
     const ad=t.advice||{act:'none',text:'—'};
     const adColor=(ad.act==='done'||ad.act==='none')?'#98a2b3':(ad.act==='stop_story'?'#dc6803':'#d92d20');
     const _eta=etaOf(t);
+    // 2026-11-19：提交超时会把该通道锁死（杜绝重复下单）。这里把锁定原因和恢复入口摆到卡片上，
+    // 否则通道一直被锁、页面上却看不到也解不开。
+    const _holds=t.channelHolds||{};
+    let _holdBar='';
+    ['tianma','story'].forEach(function(ch){
+      if(!_holds[ch])return;
+      const nm=ch==='tianma'?'天马':'Story';
+      const why=typeof _holds[ch]==='string'?_holds[ch]:'已锁定';
+      _holdBar+='<div class="adv" style="border-left-color:#d92d20;background:#fef3f2">'
+        +'<b style="color:#d92d20">'+nm+'通道锁定</b>'
+        +'<span style="color:#b42318;flex:1">'+sjEsc(why)+' · 系统不会自动重投，请先在后台核对这笔是否真的下出去了；确认没有点右侧恢复</span>'
+        +'<button data-act="resume_channel" data-channel="'+ch+'" data-id="'+t.id+'" style="margin-left:auto;padding:3px 10px;border-radius:99px;border:1px solid #d92d20;background:#fff;color:#d92d20;font-size:11.5px;font-weight:600;cursor:pointer">恢复'+nm+'</button>'
+        +'</div>';
+    });
     const p=planOf(t);
     let res='';
     if(t.cards){
@@ -1273,6 +1288,7 @@ function render(){
         '<div class="k"><small title="按最近 30 分钟平均增速外推">预计达成时间（30min 速率）</small><b style="font-size:17px;color:'+_eta.c+'">'+_eta.t+'</b>'+(   _eta.note?('<div style="font-size:10px;color:'+_eta.c+';margin-top:1px;line-height:1.35">'+_eta.note+'</div>'):'')+'</div>'+
         '<div class="k"><small>预测终值·差 '+(t.pred&&t.pred.pred?wan(t.target*10000-t.pred.pred)+'w':'—')+'</small><b style="font-size:17px">'+(t.pred?wan(t.pred.pred)+'w':'—')+'</b></div>'+
       '</div>'+
+      _holdBar+
       '<div class="adv" style="border-left-color:'+adColor+'"><b>当前建议</b><span style="color:'+adColor+'">'+sjEsc(ad.text)+'</span></div>'+
       '<div class="kfold">'+
         '<div class="kfold-head" role="button" tabindex="0" aria-expanded="'+(foldOpen?'true':'false')+'">'+
@@ -1479,6 +1495,12 @@ document.addEventListener('click',function(e){
   if(a==='stop_tianma'&&!confirm('确认停止天马投放？'))return;
   if(a==='stop_story'&&!confirm('确认停止 Story 投放？'))return;
   if(a==='add_story'&&!confirm('确认投新一轮 Story？'))return;
+  if(a==='resume_channel'){
+    var ch=b.getAttribute('data-channel'), nm=ch==='tianma'?'天马':'Story';
+    if(!confirm('确认后台【没有】这笔 '+nm+' 投放吗？\n\n恢复后该通道会解除锁定、按原规则继续投放，万一后台其实已经下出去了就会重复投钱。\n（如果拿不准，先到后台按 BV 搜一遍资源再决定）'))return;
+    kbAct('act=resume_channel&taskId='+encodeURIComponent(b.getAttribute('data-id')||'')+'&channel='+encodeURIComponent(ch),function(ok){ if(ok)kbSync(true); });
+    return;
+  }
   kbAct('act='+a+'&taskId='+encodeURIComponent(b.getAttribute('data-id')||'')+(b.getAttribute('data-budget')?('&budget='+encodeURIComponent(b.getAttribute('data-budget'))):''));
 });
   (function(){
