@@ -186,6 +186,7 @@ td{padding:7px 6px;border-bottom:1px solid #f5f6f8}
 #paneKey .pushstate .ps .h{display:flex;align-items:center;gap:6px;margin-bottom:2px}
 #paneKey .pushstate .ps .h b{font-size:12.5px}
 #paneKey .pushstate .ps .d{color:#667085}
+#paneKey .pushstate .ps .d.hist{color:#98a2b3;font-size:11.5px;margin-top:1px}
 #paneKey .pushstate .ps .bar{height:4px;border-radius:99px;background:#eef0f3;margin-top:6px;overflow:hidden}
 #paneKey .pushstate .ps .bar i{display:block;height:100%;border-radius:99px;background:#165DFF}
 @media(max-width:820px){#paneKey .pushstate{grid-template-columns:1fr}}
@@ -996,48 +997,79 @@ function etaOf(t){
   }
   return {t:hhmm(p.eta),c:'#101828',note:''};
 }
-// 2026-11-19：投放状态摘要。用户要能一眼看出「到底投出去了没有」和「资源现在什么状态」，
-// 而不是自己从卡片网格和事件流里推。判定顺序：锁定 > 生效 > 待生效 > 已下单但没卡 > 未投。
+// 2026-11-19：投放状态摘要（v2）。用户口径：
+//   · 到期了就说到期——不要再写「生效中」「后台已有资源，视为已投」；
+//   · 续上（同事/人工补的新卡）之后要显示最新的那张，预算与消耗只看还在时效内的卡；
+//   · 历史留一条就够。
+// 判定顺序：锁定 > 生效（未到期）> 待生效（未到期）> 已到期待续投 > 已下单但没卡 > 未下单。
 function pushStateOf(t){
   const LIVE=[2,4,6], RES=[2,3,4,6];
+  const ST={2:'待生效',3:'已暂停',4:'投放中',5:'已失效',6:'待审核',7:'已结束'};
+  const now=Date.now();
+  const endMs=function(c){
+    const raw=String((c&&c.end)||'').trim(); if(!raw)return 0;
+    const ms=Date.parse(raw.replace(' ','T')+(/[zZ]$|[+-]\d\d:?\d\d$/.test(raw)?'':'+08:00'));
+    if(!isNaN(ms))return ms;
+    const m2=Date.parse(raw); return isNaN(m2)?0:m2;
+  };
+  // 后台 state 不会在资源跑完的瞬间从「投放中」翻成「已结束」，所以自己按 end 判到期
+  const expired=function(c){ const st=Number(c&&c.state); if(st===5||st===7)return true; const e=endMs(c); return !!(e&&e<=now); };
+  const sum=function(a,k){ return a.reduce(function(s,x){ return s+(Number(x[k])||0); },0); };
+  const rng=function(c){ return String((c&&c.start)||'').slice(5,16)+'→'+String((c&&c.end)||'').slice(5,16); };
+  const readTxt=t.costAt?('读取 '+hhmm(t.costAt)):'';
   return ['tianma','story'].map(function(ch){
     const nm=ch==='tianma'?'天马':'Story';
-    const rows=((t.cards||{})[ch])||[];
-    const live=rows.filter(function(r){return LIVE.indexOf(Number(r.state))>=0;});
-    const res=rows.filter(function(r){return RES.indexOf(Number(r.state))>=0;});
-    const spent=rows.reduce(function(a,r){return a+(Number(r.spent)||0);},0);
-    const budget=rows.reduce(function(a,r){return a+(Number(r.budget)||0);},0);
+    const all=((t.cards||{})[ch])||[];
+    const act=all.filter(function(c){ return !expired(c); });        // 还在时效内的卡
+    const hist=all.filter(expired).sort(function(a,b){ return String(b.start).localeCompare(String(a.start)); });
+    // 投放中(4) 与在途(2 待生效 / 3 暂停 / 6 待审核) 分开，否则「待审核」也会被写成立刻生效
+    const running=act.filter(function(r){ return Number(r.state)===4; });
+    const waiting=act.filter(function(r){ return [2,3,6].indexOf(Number(r.state))>=0; });
+    const label=function(list){ const cnt={}; list.forEach(function(r){ const k=ST[Number(r.state)]||('state='+r.state); cnt[k]=(cnt[k]||0)+1; }); return Object.keys(cnt).map(function(k){ return k+' '+cnt[k]+' 张'; }).join(' · '); };
+    const spent=sum(act,'spent'), budget=sum(act,'budget');
     const rounds=Number(ch==='tianma'?t.tianmaRounds:t.storyRounds)||0;
     const pushAt=ch==='tianma'?t.tianmaPushAt:t.storyPushAt;
     const held=(t.channelHolds||{})[ch];
-    let icon,title,detail,color,pct=0;
+    const main=running[0]||waiting[0]||act[0]||null;   // 最新一张仍在时效内的卡
+    const h0=hist[0]||null;                // 最近一张已到期的卡（历史只留这一条）
+    const histOf=function(c){ return '历史 '+hist.length+' 张 · 最近 '+rng(c)+' '+(ST[Number(c.state)]||'已到期')+' · 已耗 '+wan(c.spent)+'w / '+wan(c.budget)+'w'; };
+    let icon,title,detail,color,pct=0,histTxt='';
     if(held){
       icon='🔒'; title='通道锁定'; detail=(typeof held==='string'?held:'提交待对账')+' · 不会自动重投';
       color='#d92d20';
-    }else if(live.length){
-      // 有生效资源 = 结果上投放成功；但要区分是不是我们下的单，否则同事手投的会被误读成系统投的
+      if(h0) histTxt=histOf(h0);
+    }else if(running.length){
+      // 有未到期的在投资源 = 结果上投放成功；但要区分是不是我们下的单，否则同事手投的会被误读成系统投的
       icon='✅';
       title=rounds>0?'投放成功 · 生效中':'生效中 · 非本系统提交';
-      detail='生效 '+live.length+' 张 · 已耗 '+wan(spent)+'w / '+wan(budget)+'w'+(rounds>0&&pushAt?(' · 下单 '+hhmm(pushAt)):'');
+      detail='投放中 '+running.length+' 张'+(waiting.length?(' · 另 '+label(waiting)):'')+' · 已耗 '+wan(spent)+'w / '+wan(budget)+'w'+(main?(' · '+rng(main)):'')+(rounds>0&&pushAt?(' · 下单 '+hhmm(pushAt)):'')+(readTxt?(' · '+readTxt):'');
       color='#039855'; pct=budget>0?Math.min(100,spent/budget*100):0;
-    }else if(res.length){
+      if(h0) histTxt=histOf(h0);
+    }else if(waiting.length){
       icon='⏳'; title='已提交 · 待生效';
-      detail=res.length+' 张待生效 · 预算 '+wan(budget)+'w'+(pushAt?(' · 下单 '+hhmm(pushAt)):'');
+      detail=label(waiting)+' · 预算 '+wan(budget)+'w · 已耗 '+wan(spent)+'w'+(main?(' · '+rng(main)):'')+(pushAt?(' · 下单 '+hhmm(pushAt)):'')+(readTxt?(' · '+readTxt):'');
       color='#dc6803';
+      if(h0) histTxt=histOf(h0);
+    }else if(h0){
+      // 后台当前没有任何未到期资源 = 已经到期/失效，等续投（不再写「后台已有资源，视为已投」）
+      icon='⌛'; title='已到期 · 待续投';
+      detail='后台当前无生效资源 · 上一张 '+rng(h0)+' '+(ST[Number(h0.state)]||'已到期')+' · 已耗 '+wan(h0.spent)+'w / '+wan(h0.budget)+'w'+(rounds>0?(' · 我方已投 '+rounds+' 轮'):'')+(readTxt?(' · '+readTxt):'');
+      color='#dc6803';
+      if(hist.length>1) histTxt='另有 '+(hist.length-1)+' 张更早的到期卡（历史已折叠）';
     }else if(rounds>0){
       icon='⚠️'; title='已下单但后台查不到资源';
       detail=rounds+' 轮记录'+(pushAt?(' · 最近 '+hhmm(pushAt)):'')+' · 请核对后台';
       color='#d92d20';
-    }else if(rows.length){
+    }else if(all.length){
       icon='✓'; title='未下单 · 后台已有资源';
-      detail=rows.length+' 张（非本系统提交，视为已投，不重复 all in）';
+      detail=all.length+' 张（非本系统提交，视为已投，不重复 all in）';
       color='#475467';
     }else{
       icon='—'; title='未下单';
-      detail=t.status==='running'?'后台无该通道资源':'任务已结束';
+      detail=(t.status==='running'?'后台无该通道资源':'任务已结束')+(readTxt?(' · '+readTxt):'');
       color='#98a2b3';
     }
-    return {ch:ch,nm:nm,icon:icon,title:title,detail:detail,color:color,pct:pct};
+    return {ch:ch,nm:nm,icon:icon,title:title,detail:detail,color:color,pct:pct,hist:histTxt};
   });
 }
 // 实际达成时刻：samples 里第一次播放 ≥ 目标的那个采样点
@@ -1286,6 +1318,7 @@ function render(){
       return '<div class="ps">'
         +'<div class="h"><span>'+p.icon+'</span><b style="color:'+p.color+'">'+p.nm+' · '+p.title+'</b></div>'
         +'<div class="d">'+sjEsc(p.detail)+'</div>'
+        +(p.hist?('<div class="d hist">'+sjEsc(p.hist)+'</div>'):'')
         +(p.pct>0?('<div class="bar"><i style="width:'+p.pct.toFixed(1)+'%;background:'+p.color+'"></i></div>'):'')
         +'</div>';
     }).join('')+'</div>';
@@ -1307,9 +1340,11 @@ function render(){
       if(t.cards){
       const mk=(arr,label)=>arr.forEach((c,i)=>{
         const pct=c.budget?Math.round(c.spent/c.budget*100):0;
-        const ended=[5,7].includes(Number(c.state));
+        // 2026-11-19：state 还停在「投放中」但 end 已过 = 实际已到期，这里单独标出来
+        const _exp=(function(){var r=String(c.end||'').trim();if(!r)return false;var ms=Date.parse(r.replace(' ','T')+(/[zZ]$|[+-]\d\d:?\d\d$/.test(r)?'':'+08:00'));return !isNaN(ms)&&ms<=Date.now();})();
+        const ended=[5,7].includes(Number(c.state))||_exp;
         res+='<div class="rescard">'
-          +'<div class="rh"><b>'+label+(arr.length>1?' #'+(i+1):'')+'</b><span class="tag '+(ended?'done':'live')+'">'+sjResourceStatus(c)+'</span></div>'
+          +'<div class="rh"><b>'+label+(arr.length>1?' #'+(i+1):'')+'</b><span class="tag '+(ended?'done':'live')+'">'+((_exp&&!([5,7].includes(Number(c.state))))?'已到期':sjResourceStatus(c))+'</span></div>'
           +'<div class="rb">'+wan(c.budget)+'<span>w 预算 · P'+(c.priority==null?'-':c.priority)+'</span></div>'
           +'<div class="rp"><div class="rpbar"><i style="width:'+Math.min(100,pct)+'%"></i></div><span>'+wan(c.spent)+'w · '+pct+'%</span></div>'
           +'<div class="rt">'+String(c.start).slice(5,16)+' → '+String(c.end).slice(5,16)+'</div>'
