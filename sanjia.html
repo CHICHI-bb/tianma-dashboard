@@ -1392,8 +1392,8 @@ function render(){
         +'</div>';
     }).join('')+'</div>';
     // 2026-11-20：卡片上标出媒体归属与命中的规则（三家/非三家由系统读播放页判断，不让用户填）
-    const _mtag=(function(){var z=t.isZero?'涉0':'非涉0';var m=(t.isSan===true?'三家':(t.isSan===false?'非三家':'媒体未知'))+(t.media?('·'+t.media):'');var g=(t.isSan===false&&t.isZero)?(' · '+(t.goal==='today'?'当天过':'速过')):'';return z+' · '+m+g;})();
-    const _ruleTag=t.ruleLabel?('<span class="tag" style="background:#eff8ff;color:#0b6bcb;border:1px solid #b9dcff">'+sjEsc(t.ruleLabel)+'</span>'):'';
+    const _mtag=(function(){var z=t.isZero?'涉0':'非涉0';var m=(t.isSan===true?'三家':(t.isSan===false?'非三家':'三家·历史'+(t.isZero?'（上线前登记，按原规则）':'')))+(t.media?('·'+t.media):'');var g=(t.isSan===false&&t.isZero)?(' · '+(t.goal==='today'?'当天过':'速过')):'';return z+' · '+m+g;})();
+    const _ruleTag=t.ruleLabel?('<span class="tag" style="margin-left:6px;background:#eff8ff;color:#0b6bcb;border:1px solid #b9dcff">'+sjEsc(t.ruleLabel)+'</span>'):'';
     // 非涉0 的小卡栏：自动出 10 张，点一张即建物料并绑定，后续每轮天马都带这张小卡投流
     const _xkHtml=(function(){
       if(t.isZero) return '<div class="xkbar">涉0 稿件：平台规则不出小卡、也不允许上传小卡（天马强保量并勾涉零）</div>';
