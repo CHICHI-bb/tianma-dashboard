@@ -264,6 +264,7 @@ td{padding:7px 6px;border-bottom:1px solid #f5f6f8}
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
     <div class="fm"><label>起播点（时:分:秒）</label><input id="f_qd" type="time" step="1" value="00:00:15"></div>
     <div class="fm"><label>是否涉 0</label><select id="f_z" onchange="KB.est()"><option value="0">否</option><option value="1">是</option></select></div>
+  <div class="fm"><label>目标类型（涉0 的普通媒体按此分档；三家/非三家由系统读播放页自动判断）</label><select id="f_goal" onchange="KB.est()"><option value="fast" selected>速过（尽快达成）</option><option value="today">当天过（当天内达成）</option></select></div>
   </div>
   <div class="fm"><label>稿件类型（影响投放量级，可不选）</label><select id="f_kind" onchange="KB.est()">
     <option value="" selected>不选（按窗口口径，不套类型系数）</option>
@@ -1390,6 +1391,27 @@ function render(){
         +(p.pct>0?('<div class="bar"><i style="width:'+p.pct.toFixed(1)+'%;background:'+p.color+'"></i></div>'):'')
         +'</div>';
     }).join('')+'</div>';
+    // 2026-11-20：卡片上标出媒体归属与命中的规则（三家/非三家由系统读播放页判断，不让用户填）
+    const _mtag=(function(){var z=t.isZero?'涉0':'非涉0';var m=(t.isSan===true?'三家':(t.isSan===false?'非三家':'媒体未知'))+(t.media?('·'+t.media):'');var g=(t.isSan===false&&t.isZero)?(' · '+(t.goal==='today'?'当天过':'速过')):'';return z+' · '+m+g;})();
+    const _ruleTag=t.ruleLabel?('<span class="tag" style="background:#eff8ff;color:#0b6bcb;border:1px solid #b9dcff">'+sjEsc(t.ruleLabel)+'</span>'):'';
+    // 非涉0 的小卡栏：自动出 10 张，点一张即建物料并绑定，后续每轮天马都带这张小卡投流
+    const _xkHtml=(function(){
+      if(t.isZero) return '<div class="xkbar">涉0 稿件：平台规则不出小卡、也不允许上传小卡（天马强保量并勾涉零）</div>';
+      var gen=t.cardGen||'';
+      if(!t.cardSets||!t.cardSets.length){
+        if(gen==='running') return '<div class="xkbar">🔄 10 张小卡生成中（约 3~6 分钟，完成自动出现）</div>';
+        if(String(gen).indexOf('failed')===0) return '<div class="xkbar">小卡生成失败：'+sjEsc(String(gen).slice(7))+' <button class="xkbtn" data-act="gen_cards" data-id="'+t.id+'">重试生成</button></div>';
+        return '<div class="xkbar">小卡未生成 <button class="xkbtn xkgo" data-act="gen_cards" data-id="'+t.id+'">生成 10 张小卡</button></div>';
+      }
+      var sel=Number(t.cardSel||0);
+      var hd='物料小卡 · '+t.cardSets.length+' 张 · '+(t.materialId?('已绑物料 '+sjEsc(t.materialId)):'未绑物料（点一张绑定）');
+      var h='<details class="xkfold"><summary>'+hd+'</summary><div class="xkstrip">';
+      t.cardSets.forEach(function(x){
+        h+='<span class="xkmini'+(Number(x.no)===sel?' on':'')+'"'+(Number(x.no)===sel?' style="outline:2px solid #039855"':'')+' onclick="kbUseCard(\''+t.id+'\','+x.no+')" title="小卡 #'+x.no+(x.t?(' · '+x.t+'s 截帧'):'')+' — 点一下用它建物料并绑定"><img src="'+(x.thumb||'')+'" alt=""><b>'+x.no+'</b></span>';
+      });
+      h+='</div><div class="xkhint">点一张 = 用它建物料并绑定到本任务；之后每一轮天马都带这张小卡投流，续投沿用最新一轮这张，不会自动换。'+(t.materialId?'':'（建料约 1~3 分钟）')+'</div></details>';
+      return h;
+    })();
     const _holds=t.channelHolds||{};
     let _holdBar='';
     ['tianma','story'].forEach(function(ch){
@@ -1441,7 +1463,7 @@ function render(){
       +'<span>资源 <b>'+(((t.cleanup&&t.cleanup.completedAt)?'已全部下线':((t.cleanup&&t.cleanup.why)?('撤投中 · '+t.cleanup.why):'待下线')))+'</b></span>'
       +'<button class="kmini-toggle" type="button">'+(KB_BODY[t.id]?'收起数据 ▴':'展开数据 ▾')+'</button></div>'):'';
     card.innerHTML=
-      '<div class="th"><div><a class="bv" href="https://www.bilibili.com/video/'+t.bvid+'" target="_blank" rel="noopener" title="打开 B 站播放页">'+t.bvid+'</a> <span class="tt">'+sjEsc(t.title||'')+'</span></div><div><span class="st '+cls+'">'+txt+'</span>'+kbEditBtn(t.id,t.target,t.deadline)+'</div></div>'+
+      '<div class="th"><div><a class="bv" href="https://www.bilibili.com/video/'+t.bvid+'" target="_blank" rel="noopener" title="打开 B 站播放页">'+t.bvid+'</a> <span class="tag" style="background:#f2f4f7;color:#475467;border:1px solid #e4e7ec">'+sjEsc(_mtag)+'</span>'+_ruleTag+' <span class="tt">'+sjEsc(t.title||'')+'</span></div><div><span class="st '+cls+'">'+txt+'</span>'+kbEditBtn(t.id,t.target,t.deadline)+'</div></div>'+
       _miniMeta+('<div class="kbody" style="display:'+((_finished&&!KB_BODY[t.id])?'none':'block')+'">')+
       '<div class="adv"><b>数据状态</b><span>'+((t.dataFresh)?'数据有效':'等待新数据')+' · 播放采样 '+(t.sampleAt?hhmm(t.sampleAt):'—')+' · 资源回读 '+(t.costAt?hhmm(t.costAt):'—')+'</span></div>'+
       '<div class="kpis">'+
@@ -1450,7 +1472,7 @@ function render(){
         '<div class="k"><small title="按最近 30 分钟平均增速外推">预计达成时间（30min 速率）</small><b style="font-size:17px;color:'+_eta.c+'">'+_eta.t+'</b>'+(   _eta.note?('<div style="font-size:10px;color:'+_eta.c+';margin-top:1px;line-height:1.35">'+_eta.note+'</div>'):'')+'</div>'+
         '<div class="k"><small>预测终值·差 '+(t.pred&&t.pred.pred?wan(t.target*10000-t.pred.pred)+'w':'—')+'</small><b style="font-size:17px">'+(t.pred?wan(t.pred.pred)+'w':'—')+'</b></div>'+
       '</div>'+
-      _pushHtml+
+      _pushHtml+_xkHtml+
       _holdBar+
       '<div class="adv" style="border-left-color:'+adColor+'"><b>当前建议</b><span style="color:'+adColor+'">'+sjEsc(ad.text)+'</span></div>'+
       '<div class="kfold">'+
@@ -1542,6 +1564,13 @@ function render(){
 }
 var DEMO=false, AUTO_DEMO=false, KB_LIVE=null;
 window.kbRenderKey=render;
+window.kbUseCard=function(id,no){
+  if(!confirm('用小卡 #'+no+' 建物料并绑定到该任务？\n\n建料约 1~3 分钟；之后每一轮天马都会带这张卡投流，续投沿用这张，不自动换。')) return;
+  kbAct('act=use_card&taskId='+encodeURIComponent(id)+'&no='+encodeURIComponent(no),function(ok,msg){
+    kbMsg(msg||(ok?'已绑定':'绑定失败'),!ok);
+    setTimeout(function(){ try{ if(window.kbRenderKey) window.kbRenderKey(); }catch(e){} },1500);
+  });
+};
 function kbMsg(t,bad){ if(window.sjToast){ sjToast(t,bad); } else { try{ alert((bad?'✗ ':'✓ ')+t); }catch(e){} } }
 function kbAct(qs,onDone){
   var fin=function(ok,msg){ try{ if(onDone)onDone(ok,msg); }catch(e){} };
@@ -1605,22 +1634,16 @@ function kpTodayAt(){var d=new Date();d.setHours(23,0,0,0);return d.getTime()>Da
 function kpEstText(){
   try{
     var tg=Number(document.getElementById('f_tg').value)||0;
-    var kind=document.getElementById('f_kind').value;
-    var md=document.getElementById('f_md').value;
-    var h;
-    if(md==='today'){var dtT=kpTodayAt();if(!dtT)return '量级预估：今天 23:00 已过，请改选「2 小时后」或「指定时刻」';h=(dtT-Date.now())/3600000;}
-    else if(md==='at'){var v=document.getElementById('f_at').value||'18:00';var d=new Date();var pp=v.split(':');d.setHours(+pp[0],+pp[1],0,0);if(d.getTime()<=Date.now())d.setDate(d.getDate()+1);h=(d.getTime()-Date.now())/3600000;}
-    else h=2;
-    if(!(tg>0))return '量级预估：先填目标播放';
     var zero=document.getElementById('f_z').value==='1';
-    var S=kpMag(tg,h,kind,'story'), T=kpMag(tg,h,kind,'tianma');
-    var hrs=h<=7?6:8;
-    var dEnd=new Date(Date.now()+h*3600000);
-    var pad2=function(n){return (n<10?'0':'')+n;};
-    var out='达成 '+pad2(dEnd.getHours())+':'+pad2(dEnd.getMinutes())+'（窗口 '+h.toFixed(1)+'h，一次性 '+hrs+'h）：';
-    out+='Story 强保量 '+(S/10000)+'w + 天马 强保量 '+(T/10000)+'w'+(zero?'（天马勾涉零）':'');
-    if(kind&&KP_TYPES[kind]){var w=KP_TYPES[kind].water||20; if(tg>w) out+=' · 目标高于该类水位 '+w+'w';}
-    return out;
+    var goal=(document.getElementById('f_goal').value==='today')?'today':'fast';
+    if(!(tg>0))return '量级预估：先填目标播放';
+    if(zero){
+      return '涉0：三家（央视新闻/新华社/人民日报）沿用原量级公式（按窗口与类型算量、一次性 all in、开通知）；'
+        +'普通媒体走新规则 —— '+(goal==='today'?'当天过：只投天马 60w 强保量 6h（不投 Story）':'速过：天马 60w 强保量 2h ＋ Story 10w 强保量 1h')
+        +'，都不开通知、天马勾涉零；媒体由系统读播放页自动判断。';
+    }
+    return '非涉0：天马 60w 强保量 4h ＋ Story 10w 强保量 1h（三家开通知、非三家不开）；'
+      +'提交后自动出 10 张小卡，选一张即可带小卡投流；资源跑完还没到目标会按同量级接着加（沿用上一轮的小卡）。';
   }catch(e){return '量级预估：计算失败';}
 }
   var kbBusy=false;
@@ -1645,6 +1668,7 @@ function kpEstText(){
       +'&qidian='+encodeURIComponent(document.getElementById('f_qd').value||'00:00:15')
       +'&materialId='+encodeURIComponent(document.getElementById('f_mt').value||'')
       +'&isZero='+(document.getElementById('f_z').value==='1'?'1':'0')
+      +'&goal='+(document.getElementById('f_goal').value==='today'?'today':'fast')
       +'&remark='+encodeURIComponent(document.getElementById('f_rk').value||'')
       +'&kind='+encodeURIComponent(document.getElementById('f_kind').value||'单国内'),
       function(ok,msg){
