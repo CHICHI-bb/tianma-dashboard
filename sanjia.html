@@ -1400,11 +1400,16 @@ function render(){
   list.innerHTML='';
   var _doneGrid=document.createElement('div'); _doneGrid.className='donemini-grid';
   // 2026-11-18：目标达成的卡片飘灰置底、缩成小卡（数据全部保留，展开还能看）
-  const _active=tasks.filter(function(t){return t.status==='running'||t.status==='stopping';});
-  const _done=tasks.filter(function(t){return !(t.status==='running'||t.status==='stopping');});
+  // 2026-11-21 用户口径：达标立刻飘灰 + 达标立刻撤资源，两件事并行，不是先后。
+  // 「达标收尾中」（stopping 且 cleanup.target='done'）直接算已结束进灰区，
+  // 灰区卡片「资源」一栏继续显示「撤投中 · 重点稿达标」，撤完自然变「已全部下线」。
+  const _aimDone=function(t){return !!(t.cleanup&&t.cleanup.target==='done');};
+  const _ended=function(t){ if(t.status==='running')return false; if(t.status==='stopping')return _aimDone(t); return true; };
+  const _active=tasks.filter(function(t){return !_ended(t);});
+  const _done=tasks.filter(function(t){return _ended(t);});
   const _ordered=_active.concat(_done);
   _ordered.forEach(t=>{
-    const _finished=!(t.status==='running'||t.status==='stopping');
+    const _finished=_ended(t);
     const [txt,cls]=t.status==='stopping'?['撤投确认中','wait']:statusOf(t);
     const ad=t.advice||{act:'none',text:'—'};
     const adColor=(ad.act==='done'||ad.act==='none')?'#98a2b3':(ad.act==='stop_story'?'#dc6803':'#d92d20');
