@@ -659,7 +659,12 @@ setInterval(reloadData,60000);
   <p style="margin:0 0 14px;font-size:12px;color:#98a2b3">登记后自动执行：固定以发布时间＋24小时为基准；到期时播放不足5万、实耗不足40万则继续补投，已有资源先跑完，以最后资源结束时间结算。常规预算40万；实耗满40万后按播放量分档：3.5万至5万进入12小时自然观察，低于3.5万进入70万难稿档。达到4.5万停开新轮（难稿4万），已有资源继续跑完；5万独立达标。同质组等全部成员达标或按实耗与资源尾时刻超时后一起收尾。凌晨0～8点开投的AI、强保量均在原计划上追加8小时；23点开投仍至少铺至08:00</p>
 
   <div class="fm"><label>BV 号 / av 号</label><input id="s_bv" placeholder="BV1xx411c7mD 或 av 号纯数字"></div>
-  <div class="fm"><label>是否涉0（选填）</label><select id="s_zero" style="width:100%;padding:8px 10px;border:1px solid #d0d5dd;border-radius:8px;font-size:13px;background:#fff;color:#101828"><option value="">未选择（按普通投放规则）</option><option value="0">否</option><option value="1">涉0（只投强保量天马+勾选涉零）</option></select></div>
+ <div class="fm"><label>是否涉0</label>
+   <div style="display:flex;gap:10px;align-items:center">
+     <button type="button" id="s_zero_btn" onclick="sjToggleZero()" style="padding:8px 20px;border:1px solid #d0d5dd;background:#fff;color:#475467;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">是（涉0）</button>
+     <input type="hidden" id="s_zero" value="">
+     <span id="s_zero_hint" style="font-size:12px;color:#98a2b3">不按就是不涉0</span>
+   </div></div>
   <div id="s_msg" style="font-size:12px;color:#d92d20;min-height:18px"></div>
   <div style="display:flex;gap:8px;margin-top:12px">
     <button onclick="document.getElementById('mask2').style.display='none'" style="flex:1;padding:9px;border-radius:8px;border:1px solid #d0d5dd;background:#fff;font-size:13px;cursor:pointer">取消</button>
@@ -895,7 +900,24 @@ setInterval(reloadData,60000);
     var mm=document.getElementById('kbEditMsg'); mm.textContent=''; mm.style.color='#d92d20';
     mask.style.display='flex';
   };
-  window.sjOpenForm=function(){ document.getElementById('mask2').style.display='flex'; };
+ window.sjOpenForm=function(){ document.getElementById('mask2').style.display='flex';
+   var z=document.getElementById('s_zero'); if(z){ z.value=''; } if(typeof sjZeroPaint==='function') sjZeroPaint(); };
+// 2026-11-20 用户口径：「是否涉0」从下拉改成单个「是」按钮，不按就是不涉0。
+ function sjZeroPaint(){
+   var h=document.getElementById('s_zero'),b=document.getElementById('s_zero_btn'),t=document.getElementById('s_zero_hint');
+   if(!h||!b) return;
+   var on=String(h.value)==='1';
+   b.style.background=on?'#fef4e6':'#fff';
+   b.style.borderColor=on?'#f79009':'#d0d5dd';
+   b.style.color=on?'#b54708':'#475467';
+   b.textContent=on?'✓ 是（涉0）':'是（涉0）';
+   if(t) t.textContent=on?'已选涉0 · 只投强保量天马并勾选涉零':'不按就是不涉0';
+ }
+ function sjToggleZero(){
+   var h=document.getElementById('s_zero'); if(!h) return;
+   h.value=(String(h.value)==='1')?'':'1';
+   sjZeroPaint();
+ }
   window.sjStop=function(id){
     if(!confirm('确定停止这条稿件并下线所有卡片？')) return;
     sjDo('act=sanjia_stop&taskId='+encodeURIComponent(id)).then(function(j){
@@ -1016,7 +1038,7 @@ setInterval(reloadData,60000);
         var rk=document.getElementById('s_rk'); if(rk) rk.value='';
         var cnt=(j.running||[]).length;
         var zv=document.getElementById('s_zero'); var zeroSel=zv?zv.value:'';
-        if(zv) zv.value='';
+        if(zv){ zv.value=''; if(typeof sjZeroPaint==='function') sjZeroPaint(); }
         sjToast('已登记 '+bv+(zeroSel==='1'?'（涉0 · 只投强保量）':'')+'，马上开第 1 轮 · 在跑 '+cnt+' 条');
         fetchLive().then(renderSj);
       } else {
