@@ -258,13 +258,13 @@ td{padding:7px 6px;border-bottom:1px solid #f5f6f8}
   <div class="fm"><label>BV 号</label><input id="f_bv" placeholder="BV1PuHP6uENX"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
     <div class="fm"><label>目标播放（万）</label><input id="f_tg" type="number" value="10" oninput="KB.est()"></div>
-    <div class="fm"><label>达成方式</label><select id="f_md" onchange="document.getElementById('f_atbox').style.display=this.value==='at'?'block':'none';KB.est()"><option value="2h">2 小时后</option><option value="today" selected>今天 23:00</option><option value="at">指定时刻</option></select></div>
+    <div class="fm"><label>达成方式</label><select id="f_md" onchange="document.getElementById('f_atbox').style.display=this.value==='at'?'block':'none';KB.est()"><option value="fast" selected>速过（2 小时内）</option><option value="today">当天过（今天 23:00）</option><option value="at">指定时刻过</option></select></div>
   </div>
   <div class="fm" id="f_atbox" style="display:none"><label>达成时刻</label><input id="f_at" type="time" value="18:00" onchange="KB.est()"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
     <div class="fm"><label>起播点（时:分:秒）</label><input id="f_qd" type="time" step="1" value="00:00:15"></div>
     <div class="fm"><label>是否涉 0</label><select id="f_z" onchange="KB.est()"><option value="0">否</option><option value="1">是</option></select></div>
-  <div class="fm"><label>目标类型（涉0 的普通媒体按此分档；三家/非三家由系统读播放页自动判断）</label><select id="f_goal" onchange="KB.est()"><option value="fast" selected>速过（尽快达成）</option><option value="today">当天过（当天内达成）</option></select></div>
+
   </div>
   <div class="fm"><label>稿件类型（影响投放量级，可不选）</label><select id="f_kind" onchange="KB.est()">
     <option value="" selected>不选（按窗口口径，不套类型系数）</option>
@@ -1657,7 +1657,8 @@ function kpEstText(){
   try{
     var tg=Number(document.getElementById('f_tg').value)||0;
     var zero=document.getElementById('f_z').value==='1';
-    var goal=(document.getElementById('f_goal').value==='today')?'today':'fast';
+    var md=document.getElementById('f_md').value;
+    var goal=(md==='today')?'today':'fast';
     if(!(tg>0))return '量级预估：先填目标播放';
     if(zero){
       return '涉0：三家（央视新闻/新华社/人民日报）沿用原量级公式（按窗口与类型算量、一次性 all in、开通知）；'
@@ -1678,7 +1679,7 @@ function kpEstText(){
     if(!/^BV[0-9A-Za-z]{8,12}$/.test(bv)){el.textContent='BV 号格式不对';return;}
     if(!(tg>0)){el.textContent='目标必须大于 0';return;}
     var dl;
-    if(md==='today'){var dtT2=kpTodayAt();if(!dtT2){el.textContent='今天 23:00 已过，请改选「2 小时后」或「指定时刻」';return;}dl=new Date(dtT2).toISOString();}
+    if(md==='today'){var dtT2=kpTodayAt();if(!dtT2){el.textContent='今天 23:00 已过，请改选「速过（2 小时内）」或「指定时刻过」';return;}dl=new Date(dtT2).toISOString();}
     else if(md==='at'){var t=document.getElementById('f_at').value||'18:00';var d=new Date();var p2=t.split(':');d.setHours(+p2[0],+p2[1],0,0);if(d.getTime()<=Date.now())d.setDate(d.getDate()+1);dl=d.toISOString();}
     else dl=new Date(Date.now()+2*3600*1000).toISOString();
     // 2026-11-18：提交中禁按钮、成功后自动关窗（原实现只弹 toast，弹窗一直挂着）
@@ -1690,7 +1691,7 @@ function kpEstText(){
       +'&qidian='+encodeURIComponent(document.getElementById('f_qd').value||'00:00:15')
       +'&materialId='+encodeURIComponent(document.getElementById('f_mt').value||'')
       +'&isZero='+(document.getElementById('f_z').value==='1'?'1':'0')
-      +'&goal='+(document.getElementById('f_goal').value==='today'?'today':'fast')
+      +'&goal='+(document.getElementById('f_md').value==='today'?'today':'fast')
       +'&remark='+encodeURIComponent(document.getElementById('f_rk').value||'')
       +'&kind='+encodeURIComponent(document.getElementById('f_kind').value||'单国内'),
       function(ok,msg){
